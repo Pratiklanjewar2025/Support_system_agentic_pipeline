@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LLM Evaluation Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .score-circle {
+            width: 120px; height: 120px; border-radius: 50%;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            border: 8px solid #3b82f6; color: #1e293b;
+        }
+    </style>
+</head>
+<body class="text-slate-800 p-8">
+
+    <div class="max-w-5xl mx-auto space-y-8">
+        
+        <!-- Header -->
+        <header class="bg-white rounded-xl shadow-sm p-6 border border-slate-100 flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900">LLM Evaluation</h1>
+                <p class="text-slate-500">Single-Model Pipeline Benchmarking</p>
+            </div>
+            <div id="activeModelDisplay" class="bg-blue-50 text-blue-700 px-4 py-2 rounded-lg font-mono font-medium hidden">
+                gemini-3.5-flash
+            </div>
+        </header>
+
+        <!-- Controls -->
+        <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-100 space-y-4">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="col-span-1">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Select Model</label>
+                    <select id="modelSelect" class="w-full rounded-md border border-slate-300 p-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                        <option value="gemini-3.5-flash" data-provider="gemini">Gemini 3.5 Flash</option>
+                        <option value="gemini-1.5-pro" data-provider="gemini">Gemini 1.5 Pro</option>
+                        <option value="llama-3.1-8b-instant" data-provider="groq">Llama 3.1 8B (Groq)</option>
+                    </select>
+                </div>
+                <div class="col-span-2">
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Technical Support Query</label>
+                    <input type="text" id="queryInput" value="Why is my database memory getting exhausted?" class="w-full rounded-md border border-slate-300 p-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
+                </div>
+            </div>
+            <div class="flex justify-end">
+                <button onclick="runEvaluation()" id="runBtn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-lg transition-colors flex items-center">
+                    <svg id="loadingIcon" class="animate-spin -ml-1 mr-2 h-5 w-5 text-white hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                    Run Evaluation
+                </button>
+            </div>
+        </div>
+
+        <!-- Results Area (Hidden initially) -->
+        <div id="resultsArea" class="hidden space-y-6">
+            
+            <!-- Top Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <!-- Overall Score -->
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-100 flex flex-col items-center justify-center">
+                    <h2 class="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-4">Overall Score</h2>
+                    <div class="score-circle">
+                        <span id="overallScore" class="text-3xl font-bold">91</span>
+                        <span class="text-sm text-slate-500">/ 100</span>
+                    </div>
+                    <div id="qualityGrade" class="mt-4 font-medium text-blue-600">Excellent</div>
+                </div>
+
+                <!-- LLM Metrics -->
+                <div class="col-span-1 md:col-span-3 bg-white rounded-xl shadow-sm p-6 border border-slate-100">
+                    <h2 class="text-lg font-bold text-slate-900 mb-4">LLM Quality Metrics</h2>
+                    <div class="space-y-4" id="llmMetricsContainer">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Stats -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Pipeline Metrics -->
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-100">
+                    <h2 class="text-lg font-bold text-slate-900 mb-4">Pipeline Metrics</h2>
+                    <div class="space-y-4" id="pipelineMetricsContainer">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <!-- Performance -->
+                <div class="bg-white rounded-xl shadow-sm p-6 border border-slate-100">
+                    <h2 class="text-lg font-bold text-slate-900 mb-4">Performance & Usage</h2>
+                    
+                    <div class="grid grid-cols-2 gap-4 mb-6">
+                        <div class="bg-slate-50 rounded-lg p-4">
+                            <div class="text-xs text-slate-500 uppercase font-semibold">Total Tokens</div>
+                            <div id="totalTokens" class="text-xl font-mono mt-1 text-slate-800">4,000</div>
+                            <div class="text-xs text-slate-400 mt-1"><span id="inTokens">2840</span> in / <span id="outTokens">1160</span> out</div>
+                        </div>
+                        <div class="bg-slate-50 rounded-lg p-4">
+                            <div class="text-xs text-slate-500 uppercase font-semibold">End-to-End Latency</div>
+                            <div id="e2eLatency" class="text-xl font-mono mt-1 text-slate-800">4.83s</div>
+                            <div class="text-xs text-slate-400 mt-1">LLM Latency: <span id="llmLatency">1.24s</span></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Details / Reasons -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-100 overflow-hidden">
+                <button onclick="document.getElementById('detailsBody').classList.toggle('hidden')" class="w-full p-4 bg-slate-50 hover:bg-slate-100 text-left font-medium text-slate-700 flex justify-between items-center transition-colors">
+                    View Evaluation Details (Reasons)
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div id="detailsBody" class="hidden p-6 space-y-4 divide-y divide-slate-100">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        function createProgressBar(label, score) {
+            const color = score >= 80 ? 'bg-green-500' : (score >= 60 ? 'bg-yellow-500' : 'bg-red-500');
+            return `
+                <div>
+                    <div class="flex justify-between mb-1">
+                        <span class="text-sm font-medium text-slate-700 capitalize">${label.replace('_', ' ')}</span>
+                        <span class="text-sm font-medium text-slate-700">${score}%</span>
+                    </div>
+                    <div class="w-full bg-slate-200 rounded-full h-2">
+                        <div class="${color} h-2 rounded-full transition-all duration-1000" style="width: ${score}%"></div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function createDetailRow(label, reason) {
+            return `
+                <div class="py-3">
+                    <span class="font-semibold text-slate-800 capitalize block mb-1">${label.replace('_', ' ')}</span>
+                    <span class="text-slate-600 text-sm">${reason || 'No specific reason provided.'}</span>
+                </div>
+            `;
+        }
+
+        async function runEvaluation() {
+            const btn = document.getElementById('runBtn');
+            const icon = document.getElementById('loadingIcon');
+            const select = document.getElementById('modelSelect');
+            const model = select.value;
+            const provider = select.options[select.selectedIndex].dataset.provider;
+            const query = document.getElementById('queryInput').value;
+
+            btn.disabled = true;
+            icon.classList.remove('hidden');
+            
+            document.getElementById('activeModelDisplay').textContent = model;
+            document.getElementById('activeModelDisplay').classList.remove('hidden');
+            document.getElementById('resultsArea').classList.add('hidden');
+
+            try {
+                const response = await fetch('/api/evaluation/run', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ model, provider, query })
+                });
+                
+                const data = await response.json();
+                
+                // Update UI
+                document.getElementById('overallScore').textContent = data.overall_score;
+                document.getElementById('qualityGrade').textContent = data.quality_grade;
+                
+                // LLM Metrics
+                let llmHtml = '';
+                let detailsHtml = '';
+                for (const [key, val] of Object.entries(data.llm_metrics)) {
+                    llmHtml += createProgressBar(key, val.score);
+                    detailsHtml += createDetailRow(key, val.reason);
+                }
+                document.getElementById('llmMetricsContainer').innerHTML = llmHtml;
+
+                // Pipeline Metrics
+                let pipeHtml = '';
+                for (const [key, val] of Object.entries(data.pipeline_metrics)) {
+                    pipeHtml += createProgressBar(key, val.score);
+                    detailsHtml += createDetailRow(key, val.reason);
+                }
+                document.getElementById('pipelineMetricsContainer').innerHTML = pipeHtml;
+                document.getElementById('detailsBody').innerHTML = detailsHtml;
+
+                // Performance
+                document.getElementById('totalTokens').textContent = data.performance.total_tokens.toLocaleString();
+                document.getElementById('inTokens').textContent = data.performance.input_tokens.toLocaleString();
+                document.getElementById('outTokens').textContent = data.performance.output_tokens.toLocaleString();
+                
+                document.getElementById('e2eLatency').textContent = (data.performance.end_to_end_latency_ms / 1000).toFixed(2) + 's';
+                document.getElementById('llmLatency').textContent = (data.performance.llm_latency_ms / 1000).toFixed(2) + 's';
+
+                document.getElementById('resultsArea').classList.remove('hidden');
+
+            } catch (err) {
+                alert('Evaluation failed: ' + err.message);
+            } finally {
+                btn.disabled = false;
+                icon.classList.add('hidden');
+            }
+        }
+    </script>
+</body>
+</html>
