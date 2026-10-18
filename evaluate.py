@@ -141,6 +141,8 @@ def main():
             os.environ["CEREBRAS_API_KEY"] = args.api_key
         elif provider == "huggingface":
             os.environ["HUGGINGFACE_API_KEY"] = args.api_key
+        elif provider == "deepseek":
+            os.environ["DEEPSEEK_API_KEY"] = args.api_key
 
     client = Client()
     

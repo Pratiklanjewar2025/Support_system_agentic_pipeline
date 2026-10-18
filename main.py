@@ -24,14 +24,11 @@ from dotenv import load_dotenv
 
 # -- Load environment variables ----------------------------------------------
 load_dotenv()
-api_key = os.getenv("GROQ_API_KEY")
-if not api_key:
-    print("\n[ERROR] GROQ_API_KEY not set.")
-    print("    1. Open your .env file")
-    print("    2. Add: GROQ_API_KEY=your_key_here  (get one free at https://console.groq.com/)")
+api_keys = [os.getenv("COHERE_API_KEY"), os.getenv("OPENROUTER_API_KEY"), os.getenv("GROQ_API_KEY"), os.getenv("DEEPSEEK_API_KEY")]
+if not any(api_keys):
+    print("\n[ERROR] No LLM API key found.")
+    print("    Please add COHERE_API_KEY, OPENROUTER_API_KEY, or GROQ_API_KEY to your .env file.")
     sys.exit(1)
-
-os.environ["GROQ_API_KEY"] = api_key
 
 # -- Colorama for coloured terminal output -----------------------------------
 try:
@@ -68,13 +65,15 @@ SEVERITY_COLORS = {"L1": green,  "L2": yellow,    "L3": red}
 CONFIDENCE_COLORS = {"high": green, "medium": yellow, "low": red}
 
 STEP_MESSAGES = {
-    "classify":         ("Step 1 of 5", "Understanding your issue..."),
-    "knowledge_search": ("Step 2 of 5", "Searching the knowledge base..."),
-    "diagnose":         ("Step 3 of 5", "Diagnosing the root cause..."),
-    "resolve":          ("Step 4 of 5", "Generating a fix..."),
-    "verify":           ("Step 5 of 5", "Verifying the solution..."),
-    "escalate":         ("Step 5 of 5", "Escalating to a human engineer..."),
-    "close":            ("Step 5 of 5", "Wrapping up..."),
+    "classify":         ("Step 1 of 6", "Understanding your issue..."),
+    "knowledge_search": ("Step 2 of 6", "Searching the knowledge base..."),
+    "router":           ("Step 3 of 6", "Adaptive Model Router evaluating query & retrieval confidence..."),
+    "diagnose":         ("Step 4 of 6", "Diagnosing the root cause..."),
+    "resolve":          ("Step 5 of 6", "Generating a fix..."),
+    "verify":           ("Step 6 of 6", "Verifying the solution..."),
+    "model_escalate":   ("Escalation",  "Escalating query to high-capacity reasoning model..."),
+    "escalate":         ("Escalation",  "Escalating to a human engineer..."),
+    "close":            ("Resolution",  "Wrapping up..."),
 }
 
 
@@ -139,6 +138,18 @@ def print_kb_result(state: dict):
     print(f"       Found {len(results)} relevant document(s):")
     for src in sources:
         print(f"         - {green(src)}")
+
+
+def print_router_result(state: dict):
+    rm = state.get("routing_metadata") or {}
+    tier = rm.get("chosen_tier", "tier1_fast")
+    model_name = rm.get("chosen_model", state.get("selected_model", "Default"))
+    rf = rm.get("retrieval_features", {})
+    conf = rf.get("retrieval_confidence", 0.0)
+    qf = rm.get("query_features", {})
+    comp = qf.get("complexity_score", 0.0)
+    print(f"       Routed Model : {cyan(model_name)} [{magenta(tier)}]")
+    print(f"       Complexity   : {yellow(str(comp))} | Retrieval Confidence : {green(f'{conf*100:.1f}%')}")
 
 
 def print_diagnosis_result(state: dict):
@@ -249,6 +260,8 @@ def run_pipeline(query: str):
                 print_classify_result(state)
             elif node_name == "knowledge_search":
                 print_kb_result(state)
+            elif node_name == "router":
+                print_router_result(state)
             elif node_name == "diagnose":
                 print_diagnosis_result(state)
             elif node_name == "resolve":

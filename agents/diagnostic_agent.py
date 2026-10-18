@@ -24,7 +24,9 @@ Return ONLY the JSON."""
 
 
 def diagnostic_agent(state: AgentState) -> AgentState:
-    llm = get_llm(temperature=0.1, max_tokens=400)
+    model = state.get("selected_model")
+    provider = state.get("selected_provider")
+    llm = get_llm(temperature=0.1, max_tokens=400, model=model, provider=provider)
 
     user_prompt = f"""User Issue: {state['user_query']}
 

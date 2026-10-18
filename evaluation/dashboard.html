@@ -36,8 +36,11 @@
                 <div class="col-span-1">
                     <label class="block text-sm font-medium text-slate-700 mb-1">Select Model</label>
                     <select id="modelSelect" class="w-full rounded-md border border-slate-300 p-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500">
-                        <option value="gemini-3.5-flash" data-provider="gemini">Gemini 3.5 Flash</option>
-                        <option value="gemini-1.5-pro" data-provider="gemini">Gemini 1.5 Pro</option>
+                        <option value="nvidia/nemotron-3.5-lightning:free" data-provider="openrouter" selected>Nemotron 3.5 Lightning (OpenRouter Free)</option>
+                        <option value="inclusionai/ling-3.0-flash-sante:free" data-provider="openrouter">Ling 3.0 Flash (OpenRouter Free)</option>
+                        <option value="deepseek-chat" data-provider="deepseek">DeepSeek V3 (Direct)</option>
+                        <option value="deepseek-reasoner" data-provider="deepseek">DeepSeek R1 (Direct)</option>
+                        <option value="gemini-1.5-flash" data-provider="gemini">Gemini 1.5 Flash</option>
                         <option value="llama-3.1-8b-instant" data-provider="groq">Llama 3.1 8B (Groq)</option>
                     </select>
                 </div>

@@ -35,6 +35,13 @@ class AgentState(TypedDict):
     escalated: bool
     escalation_reason: str
 
+    # Adaptive Multi-LLM Routing
+    selected_model: Optional[str]
+    selected_provider: Optional[str]
+    routing_metadata: Optional[dict]
+    needs_model_escalation: Optional[bool]
+    escalation_level: Optional[int]
+
     # Final answer shown to user
     final_answer: str
 

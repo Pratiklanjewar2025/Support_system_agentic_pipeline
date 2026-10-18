@@ -58,11 +58,22 @@ Is this resolution complete and safe?"""
 
     try:
         data = json.loads(raw)
-        state["verified"] = bool(data.get("verified", False))
-        state["verification_notes"] = data.get("notes", "")
+        verified = bool(data.get("verified", False))
+        notes = data.get("notes", "")
     except json.JSONDecodeError:
-        state["verified"] = True
-        state["verification_notes"] = "Auto-verified (parse error in LLM response)"
+        verified = True
+        notes = "Auto-verified (parse error in LLM response)"
+
+    state["verified"] = verified
+    state["verification_notes"] = notes
+
+    # Dynamic Escalation: If not verified on initial tier, escalate to high-capacity Tier 3
+    current_level = state.get("escalation_level", 0)
+    current_tier = (state.get("routing_metadata") or {}).get("chosen_tier", "tier1_fast")
+    if not verified and current_level == 0 and current_tier != "tier3_heavy":
+        state["needs_model_escalation"] = True
+    else:
+        state["needs_model_escalation"] = False
 
     return state
 

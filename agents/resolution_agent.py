@@ -20,7 +20,9 @@ No lengthy explanations. Steps only."""
 
 
 def resolution_agent(state: AgentState) -> AgentState:
-    llm = get_llm(temperature=0.2, max_tokens=600)
+    model = state.get("selected_model")
+    provider = state.get("selected_provider")
+    llm = get_llm(temperature=0.2, max_tokens=600, model=model, provider=provider)
 
     user_prompt = f"""User Issue: {state['user_query']}
 

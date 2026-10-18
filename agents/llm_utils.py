@@ -1,13 +1,15 @@
 import os
+from dotenv import load_dotenv
+load_dotenv()
 from langchain_core.language_models.chat_models import BaseChatModel
 
-def get_llm(temperature=0.0, max_tokens=300) -> BaseChatModel:
+def get_llm(temperature=0.0, max_tokens=300, model: str = None, provider: str = None) -> BaseChatModel:
     """
-    Returns an LLM instance dynamically based on environment variables.
-    Supported providers: groq, openai, anthropic, gemini, openrouter, cerebras, huggingface
+    Returns an LLM instance dynamically based on arguments or environment variables.
+    Supported providers: groq, openai, anthropic, gemini, openrouter, cerebras, huggingface, deepseek, cohere
     """
-    provider = os.getenv("LLM_PROVIDER", "groq").lower()
-    model_name = os.getenv("LLM_MODEL_NAME", "llama3-8b-8192")
+    provider = (provider or os.getenv("LLM_PROVIDER", "groq")).lower()
+    model_name = model or os.getenv("LLM_MODEL_NAME", "llama3-8b-8192")
     
     if provider == "groq":
         from langchain_groq import ChatGroq
@@ -77,6 +79,31 @@ def get_llm(temperature=0.0, max_tokens=300) -> BaseChatModel:
             huggingfacehub_api_token=api_key,
         )
         return ChatHuggingFace(llm=llm)
+        
+    elif provider == "deepseek":
+        from langchain_openai import ChatOpenAI
+        api_key = os.getenv("DEEPSEEK_API_KEY")
+        if not api_key:
+            raise ValueError("DEEPSEEK_API_KEY environment variable is missing.")
+        return ChatOpenAI(
+            base_url="https://api.deepseek.com",
+            api_key=api_key,
+            model=model_name if model_name and "llama" not in model_name else "deepseek-chat",
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
+        
+    elif provider == "cohere":
+        from langchain_cohere import ChatCohere
+        api_key = os.getenv("COHERE_API_KEY")
+        if not api_key:
+            raise ValueError("COHERE_API_KEY environment variable is missing.")
+        return ChatCohere(
+            cohere_api_key=api_key,
+            model=model_name if model_name and "llama" not in model_name else "command-r-08-2024",
+            temperature=temperature,
+            max_tokens=max_tokens,
+        )
         
     else:
         raise ValueError(f"Unsupported LLM_PROVIDER: {provider}")
