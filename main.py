@@ -24,10 +24,17 @@ from dotenv import load_dotenv
 
 # -- Load environment variables ----------------------------------------------
 load_dotenv()
-api_keys = [os.getenv("COHERE_API_KEY"), os.getenv("OPENROUTER_API_KEY"), os.getenv("GROQ_API_KEY"), os.getenv("DEEPSEEK_API_KEY")]
+api_keys = [
+    os.getenv("COHERE_API_KEY"),
+    os.getenv("OPENROUTER_API_KEY"),
+    os.getenv("GROQ_API_KEY"),
+    os.getenv("DEEPSEEK_API_KEY"),
+    os.getenv("GEMINI_API_KEY"),
+    os.getenv("GOOGLE_API_KEY"),
+]
 if not any(api_keys):
     print("\n[ERROR] No LLM API key found.")
-    print("    Please add COHERE_API_KEY, OPENROUTER_API_KEY, or GROQ_API_KEY to your .env file.")
+    print("    Please add GROQ_API_KEY, GEMINI_API_KEY, COHERE_API_KEY, or OPENROUTER_API_KEY to your .env file.")
     sys.exit(1)
 
 # -- Colorama for coloured terminal output -----------------------------------
@@ -65,6 +72,7 @@ SEVERITY_COLORS = {"L1": green,  "L2": yellow,    "L3": red}
 CONFIDENCE_COLORS = {"high": green, "medium": yellow, "low": red}
 
 STEP_MESSAGES = {
+    "cache_lookup":     ("Pre-LLM Guard", "Checking Incident Response Cache for verified diagnosis..."),
     "classify":         ("Step 1 of 6", "Understanding your issue..."),
     "knowledge_search": ("Step 2 of 6", "Searching the knowledge base..."),
     "router":           ("Step 3 of 6", "Adaptive Model Router evaluating query & retrieval confidence..."),
@@ -117,6 +125,21 @@ def print_step(node_name: str):
     print(f"\n  {cyan('>>')} {bold(label)}  --  {msg}")
 
 
+def print_cache_result(state: dict):
+    if state.get("cache_hit"):
+        match_type = str(state.get("cache_match_type", "exact")).upper()
+        sim = state.get("cache_similarity", 1.0)
+        sim_str = f" (Cosine: {sim:.4f})" if match_type == "SEMANTIC" else ""
+        lat = state.get("cache_lookup_latency", 0.0)
+        rec_id = state.get("cache_record_id", "N/A")
+        print(f"       {green(bold('CACHE HIT'))} [{match_type}{sim_str}]")
+        print(f"       Record ID : {cyan(rec_id)} | Latency: {lat:.4f}s")
+        print(f"       Action    : {green('Instant resolution with 0 LLM calls and $0.00 model cost')}")
+    else:
+        lat = state.get("cache_lookup_latency", 0.0)
+        print(f"       {yellow('Cache MISS')} ({lat:.4f}s) - Query is new or previously escalated; executing live multi-LLM pipeline.")
+
+
 def print_classify_result(state: dict):
     sev     = state.get("severity", "?")
     col     = SEVERITY_COLORS.get(sev, yellow)
@@ -144,11 +167,13 @@ def print_router_result(state: dict):
     rm = state.get("routing_metadata") or {}
     tier = rm.get("chosen_tier", "tier1_fast")
     model_name = rm.get("chosen_model", state.get("selected_model", "Default"))
+    provider = (rm.get("provider") or state.get("selected_provider", "auto")).upper()
     rf = rm.get("retrieval_features", {})
     conf = rf.get("retrieval_confidence", 0.0)
     qf = rm.get("query_features", {})
     comp = qf.get("complexity_score", 0.0)
-    print(f"       Routed Model : {cyan(model_name)} [{magenta(tier)}]")
+    print(f"       Routed Model : {cyan(bold(model_name))} [{magenta(tier)}]")
+    print(f"       Provider     : {yellow(bold(provider))}")
     print(f"       Complexity   : {yellow(str(comp))} | Retrieval Confidence : {green(f'{conf*100:.1f}%')}")
 
 
@@ -214,6 +239,14 @@ def print_final_answer(state: dict, elapsed: float):
     print()
     divider("=")
     print(f"  {cyan('Time taken:')} {elapsed:.1f} seconds")
+    if escalated:
+        print(f"  {yellow('[i] Safety Policy:')} Escalated/unverified tickets are NOT saved to cache.")
+        print(f"      Only confirmed, verified resolutions are cached to prevent automated replay of errors.")
+    elif state.get("cache_hit"):
+        match_type = str(state.get("cache_match_type", "exact")).upper()
+        print(f"  {green('[i] Cache Benefit:')} Served instantly from cache [{match_type}] with 0 LLM calls and $0.00 cost.")
+    else:
+        print(f"  {green('[i] Cache Persisted:')} Verified resolution saved to cache for future 0-cost, sub-20ms retrieval.")
     divider("=")
     print()
 
@@ -225,21 +258,27 @@ def run_pipeline(query: str):
     graph = build_graph()
 
     initial_state: dict = {
-        "user_query":         query,
-        "category":           "",
-        "severity":           "",
-        "summary":            "",
-        "kb_results":         [],
-        "kb_context":         "",
-        "root_cause":         "",
-        "confidence":         "",
-        "resolution_steps":   "",
-        "resolution_status":  "",
-        "verified":           False,
-        "verification_notes": "",
-        "escalated":          False,
-        "escalation_reason":  "",
-        "final_answer":       "",
+        "user_query":           query,
+        "category":             "",
+        "severity":             "",
+        "summary":              "",
+        "kb_results":           [],
+        "kb_context":           "",
+        "root_cause":           "",
+        "confidence":           "",
+        "resolution_steps":     "",
+        "resolution_status":    "",
+        "verified":             False,
+        "verification_notes":   "",
+        "escalated":            False,
+        "escalation_reason":    "",
+        "final_answer":         "",
+        "cache_hit":            False,
+        "cache_match_type":     "miss",
+        "cache_similarity":     0.0,
+        "cache_record_id":      None,
+        "cache_lookup_latency": 0.0,
+        "start_time":           time.time(),
     }
 
     print()
@@ -256,7 +295,9 @@ def run_pipeline(query: str):
             if node_name not in STEP_MESSAGES:
                 continue
             print_step(node_name)
-            if node_name == "classify":
+            if node_name == "cache_lookup":
+                print_cache_result(state)
+            elif node_name == "classify":
                 print_classify_result(state)
             elif node_name == "knowledge_search":
                 print_kb_result(state)
@@ -273,6 +314,49 @@ def run_pipeline(query: str):
     elapsed = time.time() - t_start
     if final_state:
         print_final_answer(final_state, elapsed)
+
+
+def print_cache_metrics():
+    """Print structured metrics from the Incident Response Cache."""
+    from agents.incident_response_cache import IncidentResponseCache
+    cache = IncidentResponseCache.get_instance()
+    m = cache.get_metrics()
+    print()
+    divider("=")
+    print(cyan(bold("  INCIDENT RESPONSE CACHE TELEMETRY & OBSERVABILITY")))
+    divider("=")
+    print(f"  Cache Enabled          : {green('Yes') if m['cache_enabled'] else red('No')}")
+    print(f"  Semantic Search Enabled: {green('Yes') if m['semantic_enabled'] else yellow('No')} (Threshold: {m['similarity_threshold']:.2f})")
+    print(f"  Records in Database    : {bold(m['total_records_in_db'])} (TTL: {int(m['ttl_seconds'])}s)")
+    print(f"  Total Lookups          : {m['total_lookups']}")
+    print(f"  Exact Cache Hits       : {green(bold(m['exact_hits']))}")
+    print(f"  Semantic Cache Hits    : {green(bold(m['semantic_hits']))}")
+    print(f"  Cache Misses           : {yellow(m['misses'])}")
+    print(f"  Rejected Semantic Guard: {yellow(m['rejected_semantic_matches'])}")
+    hit_rate_str = f"{m['hit_rate_percent']}%"
+    avoided_cost_str = f"${m['avoided_llm_cost_usd']:.5f}"
+    print(f"  Overall Hit Rate       : {cyan(bold(hit_rate_str))}")
+    print(f"  Avoided Model Calls    : {green(bold(m['avoided_model_calls']))}")
+    print(f"  Avoided LLM Cost (Est) : {green(bold(avoided_cost_str))}")
+    print(f"  Avg Lookup Latency     : {m['avg_lookup_latency_sec']:.5f}s")
+    divider("-")
+    print(bold("  Recent Verified Cached Queries (Ready for Instant 0-Cost Hit):"))
+    try:
+        import sqlite3
+        with sqlite3.connect(cache.db_path) as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT query, affected_service, hit_count FROM incident_response_cache WHERE is_invalidated=0 ORDER BY created_at DESC LIMIT 5")
+            rows = cur.fetchall()
+            if rows:
+                for q, svc, hits in rows:
+                    svc_tag = f"[{svc}] " if svc else ""
+                    print(f"    * {green(svc_tag + q)} (hits: {hits})")
+            else:
+                print(f"    {yellow('No verified records cached yet.')}")
+    except Exception as e:
+        print(f"    {yellow(f'Could not fetch recent records: {e}')}")
+    divider("=")
+    print()
 
 
 def rebuild_index():
@@ -300,8 +384,11 @@ def main():
     divider()
     print(f"  {bold('How to use:')}")
     print(f"    * Describe your technical problem and press Enter")
-    print(f"    * Type  {cyan('rebuild')}  to refresh the knowledge base")
-    print(f"    * Type  {cyan('exit')}     to quit")
+    print(f"    * Type  {cyan('cache')}         to inspect cache telemetry & cost savings")
+    print(f"    * Type  {cyan('cache-clear')}   to purge persistent cache records")
+    print(f"    * Type  {cyan('cache-toggle')}  to enable/disable incident cache")
+    print(f"    * Type  {cyan('rebuild')}       to refresh the knowledge base")
+    print(f"    * Type  {cyan('exit')}          to quit")
     divider()
 
     while True:
@@ -316,6 +403,21 @@ def main():
         if query.lower() in ("quit", "exit", "q"):
             print(f"\n  {cyan('Goodbye! Have a great day.')}\n")
             break
+        if query.lower() == "cache":
+            print_cache_metrics()
+            continue
+        if query.lower() == "cache-clear":
+            from agents.incident_response_cache import IncidentResponseCache
+            cleared = IncidentResponseCache.get_instance().clear_cache()
+            print(green(f"\n  [OK] Cache cleared: {cleared} records purged.\n"))
+            continue
+        if query.lower() == "cache-toggle":
+            from agents.incident_response_cache import IncidentResponseCache
+            cache = IncidentResponseCache.get_instance()
+            cache.enabled = not cache.enabled
+            status_str = "ENABLED" if cache.enabled else "DISABLED"
+            print(yellow(f"\n  [OK] Incident Response Cache is now {bold(status_str)}.\n"))
+            continue
         if query.lower() == "rebuild":
             rebuild_index()
             continue

@@ -43,6 +43,14 @@ Generate step-by-step resolution instructions."""
         content = content[0].get("text", str(content[0])) if isinstance(content[0], dict) else str(content[0])
     content = str(content).strip()
 
+    state["model_call_count"] = (state.get("model_call_count") or 0) + 1
+    from agents.llm_utils import estimate_token_cost
+    in_tok = int(len(user_prompt.split()) * 1.3)
+    out_tok = int(len(content.split()) * 1.3)
+    c_delta = estimate_token_cost(in_tok, out_tok, model=model, provider=provider)
+    state["actual_cost"] = round((state.get("actual_cost") or 0.0) + c_delta, 6)
+    state["budget_spent"] = state["actual_cost"]
+
     # Parse resolution status from the response
     if "RESOLUTION_STATUS: needs_human" in content:
         state["resolution_status"] = "needs_human"

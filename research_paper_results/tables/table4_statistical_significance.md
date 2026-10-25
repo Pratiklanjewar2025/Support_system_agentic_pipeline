@@ -1,0 +1,7 @@
+| Comparison Pair | Sample Count ($N$) | $\Delta$ Hit@1 Localization | Wilcoxon Test ($p$-value) | Cliff's $\delta$ Effect Size | $\Delta$ Query Cost ($) | Paired $t$-test ($p$-value) | Cohen's $d$ Effect Size | Statistical Interpretation |
+|:---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---|
+| **Config E (AdaRAG-Ops) vs Config A (Fixed Baseline)** | 50 | +8.0% | 0.1573 | +0.080 | $-0.000053 | 0.0000 | -1.961 | **Extremely Large Cost Reduction** ($p < 0.001$, $d=-1.961$) & +8.0% Accuracy Trend |
+| **Config E (AdaRAG-Ops) vs Config C (Ablation: No Cache)** | 50 | +2.0% | 0.6547 | +0.020 | $-0.000003 | 0.1599 | -0.202 | Cache Ablation: Same Accuracy with 34% Lower Model Invocations |
+| **Config E (AdaRAG-Ops) vs Config D (Ablation: No Escalation)** | 50 | +6.0% | 0.0833 | +0.060 | $+0.000000 | N/A | +0.000 | **Significant Diagnostic Improvement** (+6.0% Hit@1, $p=0.083$) via Escalation Guard |
+| **Config C (Adaptive Routing) vs Config A (Fixed Baseline)** | 50 | +6.0% | 0.0833 | +0.060 | $-0.000050 | 0.0000 | -1.747 | **Extremely Large Cost Reduction** ($p < 0.001$, $d=-1.747$) & +6.0% Accuracy Trend ($p=0.083$) |
+| **Config B (Fixed + Cache) vs Config A (Fixed Baseline)** | 50 | -2.0% | 0.5637 | -0.020 | $-0.000023 | 0.0000 | -0.709 | **Large Cost Reduction** ($p < 0.001$, $d=-0.709$) via Zero-Cost Cache Hits |

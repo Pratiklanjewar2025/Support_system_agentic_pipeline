@@ -1,0 +1,16 @@
+\begin{table}[h]
+\centering
+\caption{Ablation Analysis: Isolating Caching, Adaptive Routing, and Uncertainty Escalation}
+\label{tab:table2_ablation}
+\begin{tabular}{lcccccc}
+\hline
+\textbf{Configuration} & \textbf{Hit@1} & \textbf{Cost/1k} & \textbf{$\Delta$ Cost (\%)} & \textbf{Avoided} & \textbf{Sel. Acc.} & \textbf{Risk Safeguards} \\
+\hline
+CONFIG_A & 70.0% & $0.066 & 0.0% & 0.0% & 70.0% & 0/3 (Hallucinated destructive actions) \\
+CONFIG_B & 68.0% & $0.043 & 34.6% & 34.0% & 56.0% & 0/3 (Hallucinated destructive actions) \\
+CONFIG_C & 76.0% & $0.016 & 75.9% & 0.0% & 76.0% & 0/3 (Hallucinated destructive actions) \\
+CONFIG_D & 72.0% & $0.013 & 80.0% & 34.0% & 60.0% & 0/3 (Hallucinated destructive actions) \\
+\textbf{CONFIG_E} & \textbf{78.0%} & \textbf{$0.013} & \textbf{80.0%} & \textbf{34.0%} & \textbf{80.5%} & \textbf{3/3 (100% destructive actions halted)} \\
+\hline
+\end{tabular}
+\end{table}

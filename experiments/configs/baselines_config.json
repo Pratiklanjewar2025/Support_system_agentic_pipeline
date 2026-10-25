@@ -1,0 +1,75 @@
+{
+  "suite_name": "Baselines_Suite",
+  "description": "Rigorous baseline configurations for comparative benchmarking against AdaRAG-Ops.",
+  "common_settings": {
+    "dataset": {
+      "dataset_name": "all",
+      "split_strategy": "test",
+      "random_seed": 42
+    },
+    "random_seeds": {
+      "dataset_seed": 42,
+      "model_router_seed": 42,
+      "calibration_seed": 42,
+      "evaluation_seed": 42
+    },
+    "calibration": {
+      "default_confidence_threshold": 0.50,
+      "abstention_enabled": false
+    },
+    "constraints": {
+      "max_latency_budget_sec": 30.0,
+      "max_cost_budget_usd": 0.05,
+      "max_retries": 0,
+      "allow_escalation": false
+    },
+    "evaluation": {
+      "confidence_level": 0.95,
+      "output_dir": "experiments/runs"
+    }
+  },
+  "configurations": {
+    "baseline_a_fixed_small": {
+      "experiment_id": "BASE_A_FIXED_SMALL",
+      "name": "Baseline A: Fixed Small / Fast Model (Command-R 35B)",
+      "router": {
+        "router_type": "fixed",
+        "fixed_tier": "tier1_fast",
+        "model_id": "command-r-08-2024",
+        "model_version": "cohere/command-r-08-2024",
+        "provider": "cohere"
+      }
+    },
+    "baseline_b_fixed_balanced": {
+      "experiment_id": "BASE_B_FIXED_BALANCED",
+      "name": "Baseline B: Fixed Balanced Model (Nemotron 3.5 / Gemini Flash)",
+      "router": {
+        "router_type": "fixed",
+        "fixed_tier": "tier2_high_reasoning",
+        "model_id": "nvidia/nemotron-3.5-lightning:free",
+        "model_version": "nvidia/nemotron-3.5-lightning",
+        "provider": "openrouter"
+      }
+    },
+    "baseline_c_fixed_heavy": {
+      "experiment_id": "BASE_C_FIXED_HEAVY",
+      "name": "Baseline C: Fixed Strongest Available Model (Command-R+ 104B)",
+      "router": {
+        "router_type": "fixed",
+        "fixed_tier": "tier3_heavy",
+        "model_id": "command-r-plus-08-2024",
+        "model_version": "cohere/command-r-plus-08-2024",
+        "provider": "cohere"
+      }
+    },
+    "baseline_d_query_only": {
+      "experiment_id": "BASE_D_QUERY_ONLY",
+      "name": "Baseline D: Static Query-Only Router (FrugalGPT style)",
+      "router": {
+        "router_type": "query_only",
+        "feature_schema_path": "artifacts/calibration/feature_schema.json",
+        "enable_retrieval_confidence_features": false
+      }
+    }
+  }
+}

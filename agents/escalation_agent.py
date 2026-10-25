@@ -45,12 +45,19 @@ Generate a professional escalation report."""
     raw = response.content
     if isinstance(raw, list):
         raw = raw[0].get("text", str(raw[0])) if isinstance(raw[0], dict) else str(raw[0])
-    raw = str(raw).strip()
     state["escalated"] = True
     state["escalation_reason"] = state.get("verification_notes", "Requires human review")
+
+    diag = state.get("structured_diagnosis")
+    diag_report = ""
+    if diag:
+        from agents.diagnostic_claims import format_structured_diagnosis_report
+        diag_report = "\n\n" + format_structured_diagnosis_report(diag)
+
     state["final_answer"] = (
         "[!!] ESCALATED TO HUMAN ENGINEER\n\n"
         + raw
+        + diag_report
     )
     return state
 

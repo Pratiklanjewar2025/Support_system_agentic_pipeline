@@ -27,7 +27,7 @@ def run_incident_test():
     print("   ADAPTIVE MULTI-LLM RAG PIPELINE: LIVE INCIDENT EXECUTION TEST")
     print("=" * 80)
     print(f"\n[INCIDENT QUERY]: \"{TEST_QUERY}\"\n")
-    
+    print("[*] Initializing AI models & knowledge graph (loading in 5s)...")
     graph = build_graph()
     
     initial_state = {
@@ -79,12 +79,21 @@ def run_incident_test():
                     snippet = r.get('text', '')[:120].replace('\n', ' ')
                     print(f"        Snippet: {snippet}...")
                 step_num += 1
+
+            elif node_name == "evidence_assessment":
+                print(f"[PHASE {step_num}]: EVIDENCE-QUALITY ASSESSMENT 🔍  (+{t_elapsed:.2f}s)")
+                rf = (state.get("routing_metadata") or {}).get("retrieval_features", {})
+                missing = state.get("missing_evidence", [])
+                print(f"  * Retrieval Confidence : {rf.get('retrieval_confidence', 0.0)*100:.1f}% (Top-1 Sim: {rf.get('top_1_similarity', 0.0):.4f})")
+                print(f"  * Missing Telemetry    : {missing if missing else 'None (Complete Evidence Grounding)'}")
+                step_num += 1
                 
             elif node_name == "router":
                 print(f"[PHASE {step_num}]: ADAPTIVE MODEL ROUTER 🔀  (+{t_elapsed:.2f}s)")
                 rm = state.get("routing_metadata", {})
                 qf = rm.get("query_features", {})
                 rf = rm.get("retrieval_features", {})
+                act = state.get("recommended_action", "ANSWER")
                 print(f"  * Query Complexity Score   : {qf.get('complexity_score')} (Tokens: {qf.get('token_count')}, Log Entities: {qf.get('tech_entity_matches')})")
                 print(f"  * Retrieval Confidence     : {rf.get('retrieval_confidence')} (Mean Sim: {rf.get('mean_similarity')}, Coverage: {rf.get('lexical_coverage')})")
                 print(f"  * Model Utility Evaluation :")
@@ -92,6 +101,7 @@ def run_incident_test():
                     print(f"      - {tier:<20} : Utility = {util:.4f}")
                 print(f"  * SELECTED TIER            : {rm.get('chosen_tier')}")
                 print(f"  * SELECTED MODEL           : {state.get('selected_model')} (Provider: {state.get('selected_provider')})")
+                print(f"  * RECOMMENDED ACTION       : >>> {act} <<<")
                 print(f"  * Routing Rationale        : {rm.get('reasoning')}")
                 step_num += 1
                 
@@ -112,16 +122,42 @@ def run_incident_test():
                 step_num += 1
                 
             elif node_name == "verify":
-                print(f"[PHASE {step_num}]: VERIFICATION GATE 🛡️  (+{t_elapsed:.2f}s)")
-                print(f"  * Verified Safe  : {state.get('verified')}")
-                print(f"  * SRE Notes      : {state.get('verification_notes')}")
-                print(f"  * Model Escalated: {state.get('needs_model_escalation')}")
+                print(f"[PHASE {step_num}]: VERIFICATION GATE & EVIDENCE-GROUNDED DIAGNOSIS 🛡️  (+{t_elapsed:.2f}s)")
+                print(f"  * Verified Safe     : {state.get('verified')} (Status: {state.get('verification_status', 'N/A').upper()})")
+                print(f"  * SRE Notes         : {state.get('verification_notes')}")
+                print(f"  * Affected Component: {state.get('affected_component')}")
+                facts = state.get("observed_facts", [])
+                if facts:
+                    print(f"  * Observed Facts    : {facts[0]}")
+                diag = state.get("structured_diagnosis") or {}
+                ev = diag.get("supporting_evidence", [])
+                if ev:
+                    print(f"  * Grounded Sources  : {', '.join(e.get('source') for e in ev[:2])}")
+                claims = state.get("claim_verifications", [])
+                if claims:
+                    print(f"  * Claim-Level Checks ({len(claims)} atomic claims):")
+                    for c in claims[:3]:
+                        sup = "[OK]" if c.get("supported") else "[FAIL]"
+                        c_type = f"[{c.get('claim_type', 'claim')}]"
+                        print(f"      {sup} {c_type:<24} \"{c.get('claim')}\" (Risk: {c.get('risk')})")
+                calib = state.get("calibrated_confidence")
+                if calib is not None:
+                    band = (state.get("confidence_breakdown") or {}).get("confidence_band", "?")
+                    print(f"  * Calibrated Correctness: {calib*100:.1f}% [Band: {band.upper()}]")
+                step_num += 1
+
+            elif node_name == "retrieve_more":
+                print(f"[PHASE {step_num}]: ACTIVE RE-RETRIEVAL (RETRIEVE_MORE) 🔄  (+{t_elapsed:.2f}s)")
+                print(f"  * Expanded Knowledge Base Chunks: {len(state.get('kb_results', []))}")
                 step_num += 1
                 
-            elif node_name == "model_escalate":
-                print(f"[PHASE {step_num}]: MODEL ESCALATION TRIGGERED 🚀  (+{t_elapsed:.2f}s)")
+            elif node_name in ("switch_model", "model_escalate"):
+                print(f"[PHASE {step_num}]: MODEL SWITCH TRIGGERED 🚀  (+{t_elapsed:.2f}s)")
                 print(f"  * Upgraded Model : {state.get('selected_model')} [{state.get('selected_provider')}]")
-                print(f"  * Escalation Lvl : {state.get('escalation_level')}")
+                step_num += 1
+
+            elif node_name == "abstain":
+                print(f"[PHASE {step_num}]: SAFE DIAGNOSTIC ABSTENTION ⚠️  (+{t_elapsed:.2f}s)")
                 step_num += 1
                 
             elif node_name == "escalate":
@@ -136,6 +172,10 @@ def run_incident_test():
     total_time = time.time() - t_start
     print("=" * 80)
     print(f"  PIPELINE EXECUTION COMPLETE - Total Duration: {total_time:.2f} seconds")
+    if final_state:
+        print(f"  Budget Telemetry: Actual Cost: ${final_state.get('actual_cost', 0.0):.5f} | "
+              f"Actual Latency: {final_state.get('actual_latency', 0.0):.2f}s | "
+              f"Model Calls: {final_state.get('model_call_count', 0)}")
     print("=" * 80)
     if final_state:
         print("\n[FINAL CUSTOMER / SRE TICKET RESPONSE]:\n")

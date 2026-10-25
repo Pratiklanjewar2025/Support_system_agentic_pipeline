@@ -31,7 +31,11 @@ _chunks: List[dict] = None  # [{text, source}]
 def _get_model() -> SentenceTransformer:
     global _model
     if _model is None:
-        _model = SentenceTransformer("all-MiniLM-L6-v2")
+        try:
+            # Fast-path: use local cached weights to eliminate HuggingFace Hub network checks & latency
+            _model = SentenceTransformer("all-MiniLM-L6-v2", local_files_only=True)
+        except Exception:
+            _model = SentenceTransformer("all-MiniLM-L6-v2")
     return _model
 
 

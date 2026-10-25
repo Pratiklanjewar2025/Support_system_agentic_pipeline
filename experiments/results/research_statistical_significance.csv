@@ -1,0 +1,6 @@
+Comparison,Δ Hit@1 (%),Hit@1 p-val (Wilcoxon),Hit@1 Cliff's δ,Δ Cost ($),Cost p-val (t-test),Cost Cohen's d,Δ Latency (s),Latency p-val
+Config E (AdaRAG-Ops) vs Config A (Fixed Baseline),8.0,0.1573,0.08,-5.3e-05,0.0,-1.9606,-0.135,0.36673
+Config E (AdaRAG-Ops) vs Config C (Ablation: No Cache),2.0,0.65472,0.02,-3e-06,0.15987,-0.2018,0.0203,0.0
+Config E (AdaRAG-Ops) vs Config D (Ablation: No Escalation),6.0,0.08326,0.06,0.0,nan,0.0,-0.0056,0.00103
+Config C (Adaptive Routing) vs Config A (Fixed Baseline),6.0,0.08326,0.06,-5e-05,0.0,-1.7471,-0.1554,0.30065
+Config B (Fixed + Cache) vs Config A (Fixed Baseline),-2.0,0.5637,-0.02,-2.3e-05,1e-05,-0.7092,-0.1302,0.38398

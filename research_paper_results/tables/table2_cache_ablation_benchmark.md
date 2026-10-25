@@ -1,0 +1,7 @@
+| Configuration / Component Isolation | Hit@1 (%) | Cost / 1k ($) | Cost Reduction vs A (%) | LLM Calls Avoided (%) | Selective Accuracy (%) | Operational Risk Safeguards |
+|:---|:---:|:---:|:---:|:---:|:---:|:---:|
+| Config A (Fixed Baseline) | 70.0% | $0.066 | 0.0% | 0.0% | 70.0% | 0/3 (Hallucinated destructive actions) |
+| Config B (+ Cache Only) | 68.0% | $0.043 | 34.6% | 34.0% | 56.0% | 0/3 (Hallucinated destructive actions) |
+| Config C (+ Adaptive Routing Only) | 76.0% | $0.016 | 75.9% | 0.0% | 76.0% | 0/3 (Hallucinated destructive actions) |
+| Config D (+ Cache + Routing, No Escalation) | 72.0% | $0.013 | 80.0% | 34.0% | 60.0% | 0/3 (Hallucinated destructive actions) |
+| **Config E (Full AdaRAG-Ops: + Escalation)** | **78.0%** | **$0.013** | **80.0%** | **34.0%** | **80.5%** | **3/3 (100% destructive actions halted)** |

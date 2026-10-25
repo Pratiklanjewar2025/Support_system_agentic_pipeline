@@ -1,0 +1,16 @@
+\begin{table}[h]
+\centering
+\caption{Cache Evaluation: Exact Repeats, Paraphrases, Context Guards, and Invalidation}
+\label{tab:table3_cache_evaluation}
+\begin{tabular}{lcccccc}
+\hline
+\textbf{Subset} & \textbf{N} & \textbf{Matches} & \textbf{Hit Rate} & \textbf{Similarity} & \textbf{Guard Action} & \textbf{Precision} \\
+\hline
+Exact Repeat Inquiries & 5 & 5 & 100.0% & 1.000 (SHA-256) & Exact fingerprint match & 100.0% (5/5) \\
+Semantic Paraphrases & 4 & 4 & 100.0% & 0.6298 - 0.6891 & Compatible service & error signature & 100.0% (4/4) \\
+Conflicting Error Codes & 2 & 0 & 0.0% & 0.9511 (Raw Cosine) & Rejected: exit_code_1 vs exit_code_137 & 100.0% Guard Precision \\
+Service Cross-Talk & 1 & 0 & 0.0% & 0.1779 & Rejected: redis vs checkout service & 100.0% Guard Precision \\
+Stale/Dynamic Telemetry & 2 & 0 & 0.0% & Stale Runbook TTL & Cache bypass / TTL Invalidation & 100.0% Safe Re-eval \\
+\hline
+\end{tabular}
+\end{table}

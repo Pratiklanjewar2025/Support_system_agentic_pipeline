@@ -1,0 +1,89 @@
+{
+  "suite_name": "Proposed_Methods_Suite",
+  "description": "Proposed adaptive routing, learned ML, verification escalation, and calibrated intervention policy configurations.",
+  "common_settings": {
+    "dataset": {
+      "dataset_name": "all",
+      "split_strategy": "test",
+      "random_seed": 42
+    },
+    "random_seeds": {
+      "dataset_seed": 42,
+      "model_router_seed": 42,
+      "calibration_seed": 42,
+      "evaluation_seed": 42
+    },
+    "evaluation": {
+      "confidence_level": 0.95,
+      "output_dir": "experiments/runs"
+    }
+  },
+  "configurations": {
+    "proposed_e_adarag_rule": {
+      "experiment_id": "PROP_E_ADARAG_RULE",
+      "name": "Proposed E: Existing Rule-Based Adaptive Router (Pareto Multi-Objective)",
+      "router": {
+        "router_type": "heuristic",
+        "feature_schema_path": "artifacts/calibration/feature_schema.json",
+        "enable_retrieval_confidence_features": true
+      },
+      "constraints": {
+        "allow_escalation": false,
+        "max_retries": 0
+      }
+    },
+    "proposed_f_learned_rf": {
+      "experiment_id": "PROP_F_LEARNED_RF",
+      "name": "Proposed F: Existing Learned Random Forest Router",
+      "router": {
+        "router_type": "learned_rf",
+        "feature_schema_path": "artifacts/calibration/feature_schema.json",
+        "enable_retrieval_confidence_features": true
+      },
+      "constraints": {
+        "allow_escalation": false,
+        "max_retries": 0
+      }
+    },
+    "proposed_g_verification_escalation": {
+      "experiment_id": "PROP_G_VERIFICATION_ESCALATION",
+      "name": "Proposed G: Adaptive Routing with Verification & Escalation",
+      "router": {
+        "router_type": "heuristic",
+        "feature_schema_path": "artifacts/calibration/feature_schema.json",
+        "enable_retrieval_confidence_features": true
+      },
+      "constraints": {
+        "allow_escalation": true,
+        "max_escalations": 1,
+        "max_retries": 1
+      }
+    },
+    "proposed_h_calibrated_intervention": {
+      "experiment_id": "PROP_H_CALIBRATED_INTERVENTION",
+      "name": "Proposed H: Calibrated Intervention-Aware Policy (Quality-Constrained Cost-Min)",
+      "router": {
+        "router_type": "intervention_aware",
+        "strategy": "quality_first",
+        "feature_schema_path": "artifacts/calibration/feature_schema.json",
+        "enable_retrieval_confidence_features": true
+      },
+      "calibration": {
+        "calibrator_type": "isotonic",
+        "calibrator_model_path": "artifacts/calibration/calibrated_estimator.joblib",
+        "n_bins": 5,
+        "default_confidence_threshold": 0.50,
+        "abstention_enabled": true
+      },
+      "constraints": {
+        "target_quality": 0.70,
+        "max_latency_budget_sec": 15.0,
+        "max_cost_budget_usd": 0.005,
+        "max_risk_threshold": 1.5,
+        "max_retries": 2,
+        "max_escalations": 1,
+        "allow_escalation": true
+      }
+    }
+  }
+}

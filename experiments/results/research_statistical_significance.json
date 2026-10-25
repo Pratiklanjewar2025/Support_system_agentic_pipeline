@@ -1,0 +1,67 @@
+{
+  "Config E (AdaRAG-Ops) vs Config A (Fixed Baseline)": {
+    "comparison": "Config E (AdaRAG-Ops) vs Config A (Fixed Baseline)",
+    "n_samples": 50,
+    "delta_hit1_percent": 8.0,
+    "hit1_p_value_wilcoxon": 0.1573,
+    "hit1_cliff_delta": 0.08,
+    "delta_cost_usd": -5.3e-05,
+    "cost_p_value_paired_t": 0.0,
+    "cost_cohen_d": -1.9606,
+    "delta_latency_sec": -0.135,
+    "latency_p_value": 0.36673,
+    "statistically_significant": true
+  },
+  "Config E (AdaRAG-Ops) vs Config C (Ablation: No Cache)": {
+    "comparison": "Config E (AdaRAG-Ops) vs Config C (Ablation: No Cache)",
+    "n_samples": 50,
+    "delta_hit1_percent": 2.0,
+    "hit1_p_value_wilcoxon": 0.65472,
+    "hit1_cliff_delta": 0.02,
+    "delta_cost_usd": -3e-06,
+    "cost_p_value_paired_t": 0.15987,
+    "cost_cohen_d": -0.2018,
+    "delta_latency_sec": 0.0203,
+    "latency_p_value": 0.0,
+    "statistically_significant": false
+  },
+  "Config E (AdaRAG-Ops) vs Config D (Ablation: No Escalation)": {
+    "comparison": "Config E (AdaRAG-Ops) vs Config D (Ablation: No Escalation)",
+    "n_samples": 50,
+    "delta_hit1_percent": 6.0,
+    "hit1_p_value_wilcoxon": 0.08326,
+    "hit1_cliff_delta": 0.06,
+    "delta_cost_usd": 0.0,
+    "cost_p_value_paired_t": NaN,
+    "cost_cohen_d": 0.0,
+    "delta_latency_sec": -0.0056,
+    "latency_p_value": 0.00103,
+    "statistically_significant": false
+  },
+  "Config C (Adaptive Routing) vs Config A (Fixed Baseline)": {
+    "comparison": "Config C (Adaptive Routing) vs Config A (Fixed Baseline)",
+    "n_samples": 50,
+    "delta_hit1_percent": 6.0,
+    "hit1_p_value_wilcoxon": 0.08326,
+    "hit1_cliff_delta": 0.06,
+    "delta_cost_usd": -5e-05,
+    "cost_p_value_paired_t": 0.0,
+    "cost_cohen_d": -1.7471,
+    "delta_latency_sec": -0.1554,
+    "latency_p_value": 0.30065,
+    "statistically_significant": true
+  },
+  "Config B (Fixed + Cache) vs Config A (Fixed Baseline)": {
+    "comparison": "Config B (Fixed + Cache) vs Config A (Fixed Baseline)",
+    "n_samples": 50,
+    "delta_hit1_percent": -2.0,
+    "hit1_p_value_wilcoxon": 0.5637,
+    "hit1_cliff_delta": -0.02,
+    "delta_cost_usd": -2.3e-05,
+    "cost_p_value_paired_t": 1e-05,
+    "cost_cohen_d": -0.7092,
+    "delta_latency_sec": -0.1302,
+    "latency_p_value": 0.38398,
+    "statistically_significant": true
+  }
+}

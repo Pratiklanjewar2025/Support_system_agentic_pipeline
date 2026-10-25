@@ -1,0 +1,122 @@
+{
+  "benchmark_name": "AdaRAG_Ops_Reproducible_Research_Evaluation",
+  "version": "1.0.0",
+  "description": "Standardized benchmark suite comparing Fixed-Model RAG, Caching, Adaptive Routing, and Full AdaRAG-Ops across 50 held-out incidents.",
+  "dataset_path": "datasets/evaluation_benchmark_v1.jsonl",
+  "calibration_dataset_path": "datasets/calibration_dataset_v1.jsonl",
+  "random_seed": 42,
+  "token_pricing_catalog": {
+    "command-r-08-2024": {
+      "input_per_1k": 0.00015,
+      "output_per_1k": 0.00060,
+      "blended_per_1k": 0.00020
+    },
+    "command-r-plus-08-2024": {
+      "input_per_1k": 0.00250,
+      "output_per_1k": 0.01000,
+      "blended_per_1k": 0.00300
+    },
+    "gemini-2.5-flash": {
+      "input_per_1k": 0.00015,
+      "output_per_1k": 0.00060,
+      "blended_per_1k": 0.00020
+    },
+    "gemini-2.5-pro": {
+      "input_per_1k": 0.00125,
+      "output_per_1k": 0.00500,
+      "blended_per_1k": 0.00200
+    },
+    "openai/gpt-oss-20b": {
+      "input_per_1k": 0.00010,
+      "output_per_1k": 0.00030,
+      "blended_per_1k": 0.00010
+    },
+    "nvidia/nemotron-3-ultra-550b-a55b:free": {
+      "input_per_1k": 0.00000,
+      "output_per_1k": 0.00000,
+      "blended_per_1k": 0.00000
+    },
+    "deepseek-chat": {
+      "input_per_1k": 0.00014,
+      "output_per_1k": 0.00028,
+      "blended_per_1k": 0.00020
+    }
+  },
+  "accounting_standards": {
+    "lightweight_query_tokens": 271,
+    "enterprise_telemetry_tokens": 1000,
+    "cost_reconciliation_note": "Baseline C at $0.678 / 1k queries assumes ~271 tokens per lightweight query with Command-R+ 104B pricing ($0.0025/1k tokens). Enterprise budgeting at $25.00 / 10k queries ($2.50 / 1k queries) assumes 1,000 tokens per incident payload containing logs, traces, and metrics."
+  },
+  "configurations": {
+    "CONFIG_A": {
+      "config_id": "CONFIG_A",
+      "config_name": "Configuration A: Fixed-Model RAG (No Cache, No Routing)",
+      "cache_enabled": false,
+      "semantic_cache_enabled": false,
+      "router_type": "fixed",
+      "fixed_tier": "tier1_fast",
+      "fixed_model_id": "command-r-08-2024",
+      "allow_escalation": false,
+      "active_retrieval_enabled": false,
+      "verification_enabled": false,
+      "calibration_enabled": false,
+      "description": "Fixed fast model without caching or adaptive routing. Baseline RAG."
+    },
+    "CONFIG_B": {
+      "config_id": "CONFIG_B",
+      "config_name": "Configuration B: Fixed-Model RAG + Cache",
+      "cache_enabled": true,
+      "semantic_cache_enabled": true,
+      "cache_db_path": "experiments/results/cache_CONFIG_B.db",
+      "similarity_threshold": 0.55,
+      "router_type": "fixed",
+      "fixed_tier": "tier1_fast",
+      "fixed_model_id": "command-r-08-2024",
+      "allow_escalation": false,
+      "active_retrieval_enabled": false,
+      "verification_enabled": false,
+      "calibration_enabled": false,
+      "description": "Fixed fast model with exact (SHA-256) and semantic (SentenceTransformer) response caching."
+    },
+    "CONFIG_C": {
+      "config_id": "CONFIG_C",
+      "config_name": "Configuration C: Adaptive Routing (No Cache)",
+      "cache_enabled": false,
+      "semantic_cache_enabled": false,
+      "router_type": "adaptive",
+      "allow_escalation": false,
+      "active_retrieval_enabled": false,
+      "verification_enabled": false,
+      "calibration_enabled": true,
+      "description": "Adaptive Pareto model selection across 4 tiers without persistent caching."
+    },
+    "CONFIG_D": {
+      "config_id": "CONFIG_D",
+      "config_name": "Configuration D: Adaptive Routing + Cache (No Escalation)",
+      "cache_enabled": true,
+      "semantic_cache_enabled": true,
+      "cache_db_path": "experiments/results/cache_CONFIG_D.db",
+      "similarity_threshold": 0.55,
+      "router_type": "adaptive",
+      "allow_escalation": false,
+      "active_retrieval_enabled": false,
+      "verification_enabled": false,
+      "calibration_enabled": true,
+      "description": "Adaptive model routing with exact and semantic caching, but without uncertainty-based escalation."
+    },
+    "CONFIG_E": {
+      "config_id": "CONFIG_E",
+      "config_name": "Configuration E: Full AdaRAG-Ops",
+      "cache_enabled": true,
+      "semantic_cache_enabled": true,
+      "cache_db_path": "experiments/results/cache_CONFIG_E.db",
+      "similarity_threshold": 0.55,
+      "router_type": "intervention_aware",
+      "allow_escalation": true,
+      "active_retrieval_enabled": true,
+      "verification_enabled": true,
+      "calibration_enabled": true,
+      "description": "Full AdaRAG-Ops pipeline: exact/semantic caching, intervention-aware routing, claim-level verification, isotonic uncertainty calibration, and selective escalation/abstention."
+    }
+  }
+}

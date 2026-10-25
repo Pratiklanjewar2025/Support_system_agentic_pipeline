@@ -1,0 +1,109 @@
+{
+  "suite_name": "Ablation_Studies_Suite",
+  "description": "Systematic ablation studies isolating key components of the AdaRAG-Ops pipeline.",
+  "common_settings": {
+    "dataset": {
+      "dataset_name": "all",
+      "split_strategy": "test",
+      "random_seed": 42
+    },
+    "random_seeds": {
+      "dataset_seed": 42,
+      "model_router_seed": 42,
+      "calibration_seed": 42,
+      "evaluation_seed": 42
+    },
+    "evaluation": {
+      "confidence_level": 0.95,
+      "output_dir": "experiments/runs"
+    }
+  },
+  "configurations": {
+    "ablation_1_no_retrieval_features": {
+      "experiment_id": "ABLATION_1_NO_RETRIEVAL_FEATURES",
+      "name": "Ablation 1: Removing Retrieval-Confidence Features (Rc=1.0)",
+      "router": {
+        "router_type": "heuristic",
+        "feature_schema_path": "artifacts/calibration/feature_schema.json",
+        "enable_retrieval_confidence_features": false
+      },
+      "constraints": {
+        "allow_escalation": false,
+        "max_retries": 0
+      }
+    },
+    "ablation_2_no_learned_router": {
+      "experiment_id": "ABLATION_2_NO_LEARNED_ROUTER",
+      "name": "Ablation 2: Removing the Learned Router (Static Pareto Heuristic)",
+      "router": {
+        "router_type": "heuristic",
+        "feature_schema_path": "artifacts/calibration/feature_schema.json",
+        "enable_retrieval_confidence_features": true
+      },
+      "constraints": {
+        "allow_escalation": false,
+        "max_retries": 0
+      }
+    },
+    "ablation_3_no_calibrated_confidence": {
+      "experiment_id": "ABLATION_3_NO_CALIBRATED_CONFIDENCE",
+      "name": "Ablation 3: Removing Calibrated Correctness Estimates",
+      "router": {
+        "router_type": "heuristic",
+        "feature_schema_path": "artifacts/calibration/feature_schema.json",
+        "enable_retrieval_confidence_features": true
+      },
+      "calibration": {
+        "calibrator_type": "none",
+        "abstention_enabled": false
+      },
+      "constraints": {
+        "allow_escalation": false,
+        "max_retries": 0
+      }
+    },
+    "ablation_4_no_cost_constraints": {
+      "experiment_id": "ABLATION_4_NO_COST_CONSTRAINTS",
+      "name": "Ablation 4: Removing Cost Constraints (Always Heavy Tier)",
+      "router": {
+        "router_type": "fixed",
+        "fixed_tier": "tier3_heavy",
+        "model_id": "command-r-plus-08-2024",
+        "provider": "cohere"
+      },
+      "constraints": {
+        "target_quality": 0.99,
+        "max_cost_budget_usd": 100.0,
+        "max_latency_budget_sec": 1000.0,
+        "allow_escalation": false
+      }
+    },
+    "ablation_5_no_verification_escalation": {
+      "experiment_id": "ABLATION_5_NO_VERIFICATION_ESCALATION",
+      "name": "Ablation 5: Removing Verification & Escalation (Single-Shot)",
+      "router": {
+        "router_type": "heuristic",
+        "feature_schema_path": "artifacts/calibration/feature_schema.json",
+        "enable_retrieval_confidence_features": true
+      },
+      "constraints": {
+        "allow_escalation": false,
+        "max_escalations": 0,
+        "max_retries": 0
+      }
+    },
+    "ablation_6_no_intervention_selection": {
+      "experiment_id": "ABLATION_6_NO_INTERVENTION_SELECTION",
+      "name": "Ablation 6: Removing Intervention Selection (Static ANSWER)",
+      "router": {
+        "router_type": "heuristic",
+        "feature_schema_path": "artifacts/calibration/feature_schema.json",
+        "enable_retrieval_confidence_features": true
+      },
+      "constraints": {
+        "allow_escalation": false,
+        "max_retries": 0
+      }
+    }
+  }
+}

@@ -1,0 +1,36 @@
+{
+  "evaluated_incident_count": 4,
+  "strategy": "cost_min",
+  "action_distribution": {
+    "ANSWER": 1,
+    "RETRIEVE_MORE": 0,
+    "SWITCH_MODEL": 1,
+    "SAMPLE_CANDIDATES": 0,
+    "ABSTAIN": 1,
+    "HUMAN_REVIEW": 1
+  },
+  "action_percentages": {
+    "ANSWER": 25.0,
+    "RETRIEVE_MORE": 0.0,
+    "SWITCH_MODEL": 25.0,
+    "SAMPLE_CANDIDATES": 0.0,
+    "ABSTAIN": 25.0,
+    "HUMAN_REVIEW": 25.0
+  },
+  "decision_modes": {
+    "optimal_constrained_minimum_cost": 3,
+    "safe_fallback": 1,
+    "baseline": 0
+  },
+  "average_incremental_cost_usd": 0.125625,
+  "average_expected_latency_sec": 2.175,
+  "average_expected_reliability": 0.6375,
+  "safe_fallback_rate_pct": 25.0,
+  "constraints_applied": {
+    "target_quality": 0.68,
+    "max_latency_budget": 12.0,
+    "max_cost_budget": 0.006,
+    "max_risk_threshold": 1.6,
+    "max_retries": 2
+  }
+}

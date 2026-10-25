@@ -1,0 +1,147 @@
+{
+  "validation_sample_count": 17,
+  "training_sample_count": 39,
+  "small_sample_warning": true,
+  "warning_message": "Validation sample size is small (N < 20). Calibration metrics are reported for exploratory comparison.",
+  "baseline_calibrated_logistic_regression": {
+    "brier_score": 0.0488,
+    "expected_calibration_error_ece": 0.1954,
+    "maximum_calibration_error_mce": 0.5114,
+    "reliability_diagram": [
+      {
+        "bin_id": 1,
+        "range": [
+          0.0,
+          0.2
+        ],
+        "count": 4,
+        "avg_confidence": 0.1156,
+        "empirical_accuracy": 0.0,
+        "calibration_gap": 0.1156
+      },
+      {
+        "bin_id": 2,
+        "range": [
+          0.2,
+          0.4
+        ],
+        "count": 4,
+        "avg_confidence": 0.244,
+        "empirical_accuracy": 0.0,
+        "calibration_gap": 0.244
+      },
+      {
+        "bin_id": 3,
+        "range": [
+          0.4,
+          0.6
+        ],
+        "count": 1,
+        "avg_confidence": 0.4886,
+        "empirical_accuracy": 1.0,
+        "calibration_gap": 0.5114
+      },
+      {
+        "bin_id": 4,
+        "range": [
+          0.6,
+          0.8
+        ],
+        "count": 2,
+        "avg_confidence": 0.7433,
+        "empirical_accuracy": 1.0,
+        "calibration_gap": 0.2567
+      },
+      {
+        "bin_id": 5,
+        "range": [
+          0.8,
+          1.0
+        ],
+        "count": 6,
+        "avg_confidence": 0.8571,
+        "empirical_accuracy": 1.0,
+        "calibration_gap": 0.1429
+      }
+    ],
+    "accuracy_by_confidence_band": {
+      "low_confidence_[0.0, 0.40)": {
+        "count": 8,
+        "empirical_accuracy": 0.0,
+        "mean_confidence": 0.1798
+      },
+      "moderate_confidence_[0.40, 0.70)": {
+        "count": 2,
+        "empirical_accuracy": 1.0,
+        "mean_confidence": 0.5902
+      },
+      "high_confidence_[0.70, 1.00]": {
+        "count": 7,
+        "empirical_accuracy": 1.0,
+        "mean_confidence": 0.8482
+      }
+    }
+  },
+  "comparison_calibrated_random_forest": {
+    "brier_score": 0.0667,
+    "expected_calibration_error_ece": 0.2165,
+    "maximum_calibration_error_mce": 0.5899,
+    "reliability_diagram": [
+      {
+        "bin_id": 1,
+        "range": [
+          0.0,
+          0.2
+        ],
+        "count": 5,
+        "avg_confidence": 0.1588,
+        "empirical_accuracy": 0.0,
+        "calibration_gap": 0.1588
+      },
+      {
+        "bin_id": 2,
+        "range": [
+          0.2,
+          0.4
+        ],
+        "count": 3,
+        "avg_confidence": 0.2256,
+        "empirical_accuracy": 0.0,
+        "calibration_gap": 0.2256
+      },
+      {
+        "bin_id": 3,
+        "range": [
+          0.4,
+          0.6
+        ],
+        "count": 2,
+        "avg_confidence": 0.4101,
+        "empirical_accuracy": 1.0,
+        "calibration_gap": 0.5899
+      },
+      {
+        "bin_id": 4,
+        "range": [
+          0.6,
+          0.8
+        ],
+        "count": 1,
+        "avg_confidence": 0.7957,
+        "empirical_accuracy": 1.0,
+        "calibration_gap": 0.2043
+      },
+      {
+        "bin_id": 5,
+        "range": [
+          0.8,
+          1.0
+        ],
+        "count": 6,
+        "avg_confidence": 0.8624,
+        "empirical_accuracy": 1.0,
+        "calibration_gap": 0.1376
+      }
+    ]
+  }
+}

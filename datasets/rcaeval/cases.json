@@ -1,0 +1,242 @@
+[
+  {
+    "id": "RE1_frontend_CPU_1",
+    "benchmark": "RE1",
+    "system": "online-boutique",
+    "fault_type": "CPU",
+    "root_cause_service": "frontend",
+    "root_cause_indicator": "container_cpu_usage_seconds_total",
+    "inject_time": 1650000100,
+    "symptom": "Frontend HTTP 500 error rate spiked to 14.2% with server p99 latency exceeding 2800ms.",
+    "query": "Online Boutique web frontend is returning HTTP 500 errors to users and p99 request latency has surged to 2800ms.",
+    "context": "Runbook: Online Boutique Frontend Performance Degradation. Cause: CPU saturation on the Node.js/Go frontend container caused by template rendering bottleneck under load. Fix: 1. Verify CPU utilization with kubectl top pod. 2. Scale frontend deployment replicas. 3. Adjust container CPU limits in deployment manifest.",
+    "reference": "The incident is caused by CPU saturation on the frontend service container (container_cpu_usage_seconds_total maxed out). Remediation requires scaling frontend deployment replicas and adjusting CPU limits.",
+    "category": "cpu",
+    "severity": "L2",
+    "telemetry": {
+      "metrics_summary": "container_cpu_usage_seconds_total: frontend=0.98 cores (limit=1.0), cartservice=0.12, paymentservice=0.08",
+      "logs_summary": "frontend: [ERROR] upstream request timeout while rendering product catalog page",
+      "traces_summary": "trace_id=4a81b7e: /product/0PUK6V6EV0 span duration=2850ms on service 'frontend'"
+    }
+  },
+  {
+    "id": "RE1_cartservice_MEM_1",
+    "benchmark": "RE1",
+    "system": "online-boutique",
+    "fault_type": "MEM",
+    "root_cause_service": "cartservice",
+    "root_cause_indicator": "container_memory_working_set_bytes",
+    "inject_time": 1650000200,
+    "symptom": "Users cannot add items to cart; cartservice pod is restarting repeatedly with OOMKilled exit code 137.",
+    "query": "Users are unable to add items to shopping cart; cartservice pod entered CrashLoopBackOff with OOMKilled exit code 137.",
+    "context": "Runbook: CartService Redis Memory Exhaustion. Cause: cartservice container memory working set exceeded the 256Mi memory limit due to unevicted cached sessions. Fix: 1. Inspect memory usage in cartservice. 2. Configure Redis TTL and increase cartservice memory limit to 512Mi. 3. Restart cartservice pod.",
+    "reference": "The cartservice failure is caused by memory exhaustion (container_memory_working_set_bytes exceeded limit), causing the container to be OOMKilled with exit code 137. Increase memory limit to 512Mi and configure session cache TTL.",
+    "category": "application",
+    "severity": "L2",
+    "telemetry": {
+      "metrics_summary": "container_memory_working_set_bytes: cartservice=268435456 bytes (limit reached), exit_code=137",
+      "logs_summary": "cartservice: System.OutOfMemoryException: Exception of type 'System.OutOfMemoryException' was thrown.",
+      "traces_summary": "trace_id=7b12f9a: /cart/add failed with RPC status UNAVAILABLE from cartservice"
+    }
+  },
+  {
+    "id": "RE2_paymentservice_DELAY_1",
+    "benchmark": "RE2",
+    "system": "online-boutique",
+    "fault_type": "DELAY",
+    "root_cause_service": "paymentservice",
+    "root_cause_indicator": "network_latency_ms",
+    "inject_time": 1650000300,
+    "symptom": "Checkout service RPC calls to paymentservice timing out after 3000ms with payment failure errors.",
+    "query": "Checkout transactions are failing at final payment authorization due to RPC timeouts contacting paymentservice.",
+    "context": "Runbook: PaymentService Network Degradation. Cause: Injected network delay or egress throttling on paymentservice veth interface. Fix: 1. Trace payment RPC spans using trace ID. 2. Verify network interface packet delay via tc qdisc. 3. Clear interface queuing discipline rules.",
+    "reference": "The checkout failures are caused by severe network latency injection on the paymentservice (network_latency_ms > 3000ms), causing upstream checkout RPC timeouts. Clear tc qdisc network delay rules on the paymentservice container.",
+    "category": "network",
+    "severity": "L2",
+    "telemetry": {
+      "metrics_summary": "network_latency_ms: paymentservice p99=3200ms (baseline=15ms), checkout p99=3350ms",
+      "logs_summary": "checkoutservice: [WARN] PaymentService Charge RPC deadline exceeded after 3000ms",
+      "traces_summary": "trace_id=9c33d81: /checkout -> Charge RPC span duration=3050ms status=DEADLINE_EXCEEDED"
+    }
+  },
+  {
+    "id": "RE2_currencyservice_LOSS_1",
+    "benchmark": "RE2",
+    "system": "online-boutique",
+    "fault_type": "LOSS",
+    "root_cause_service": "currencyservice",
+    "root_cause_indicator": "network_transmit_packets_dropped_total",
+    "inject_time": 1650000400,
+    "symptom": "Currency conversion rates failing to load; frontend displaying raw USD with intermittent connection resets.",
+    "query": "Frontend currency conversion component is failing intermittently with connection resets and dropped packets.",
+    "context": "Runbook: CurrencyService Network Packet Loss. Cause: High network packet drop rate on currencyservice interface. Fix: 1. Check network_transmit_packets_dropped_total. 2. Restart virtual ethernet pair on pod host. 3. Re-verify gRPC currency conversion stream.",
+    "reference": "The currency conversion failures are caused by network packet loss on currencyservice (network_transmit_packets_dropped_total elevated to 40%). Reset container network interface or reschedule pod.",
+    "category": "network",
+    "severity": "L1",
+    "telemetry": {
+      "metrics_summary": "network_transmit_packets_dropped_total: currencyservice packet_loss=41.2%",
+      "logs_summary": "currencyservice: [ERROR] gRPC stream reset by peer (connection dropped)",
+      "traces_summary": "trace_id=1d88e02: GetSupportedCurrencies gRPC call failed with UNAVAILABLE"
+    }
+  },
+  {
+    "id": "RE1_catalogue_CPU_1",
+    "benchmark": "RE1",
+    "system": "sock-shop",
+    "fault_type": "CPU",
+    "root_cause_service": "catalogue",
+    "root_cause_indicator": "container_cpu_usage_seconds_total",
+    "inject_time": 1650000500,
+    "symptom": "Sock Shop catalogue items browsing latency increased from 40ms to 4500ms; catalogue service CPU pegged at 100%.",
+    "query": "Product catalogue browsing on Sock Shop is extremely sluggish with response times over 4 seconds and catalogue container CPU at 100%.",
+    "context": "Runbook: Sock Shop Catalogue CPU Saturation. Cause: Intensive unindexed MySQL queries executed by catalogue service consuming 100% container CPU. Fix: 1. Identify slow queries in catalogue-db. 2. Add composite index on category and price. 3. Scale catalogue service pod replicas.",
+    "reference": "The latency spike is caused by CPU saturation on the catalogue service (container_cpu_usage_seconds_total at 100%) due to unindexed catalogue search queries. Add database indices and scale catalogue service replicas.",
+    "category": "cpu",
+    "severity": "L2",
+    "telemetry": {
+      "metrics_summary": "container_cpu_usage_seconds_total: catalogue=0.99 (limit=1.0), front-end=0.25",
+      "logs_summary": "catalogue: [WARN] SQL query execution time exceeded 3800ms for SELECT * FROM sock",
+      "traces_summary": "trace_id=5e77a11: GET /catalogue span=4210ms on 'catalogue' service"
+    }
+  },
+  {
+    "id": "RE1_orders_MEM_1",
+    "benchmark": "RE1",
+    "system": "sock-shop",
+    "fault_type": "MEM",
+    "root_cause_service": "orders",
+    "root_cause_indicator": "container_memory_working_set_bytes",
+    "inject_time": 1650000600,
+    "symptom": "Order placement is failing; orders service JVM heap memory reached 98% with frequent stop-the-world GC pauses.",
+    "query": "Customers cannot complete orders on Sock Shop; orders service is throwing OutOfMemoryError and pausing during garbage collection.",
+    "context": "Runbook: Sock Shop Orders Memory Leak. Cause: Unbounded queue in orders service holding order payload objects in memory. Fix: 1. Take JVM heap dump from orders container. 2. Flush uncommitted queue messages. 3. Increase JVM -Xmx heap allocation and redeploy.",
+    "reference": "The order placement failures are caused by JVM heap exhaustion and memory leak in the orders service (container_memory_working_set_bytes at 98%). Increase JVM -Xmx heap limit and patch memory retention in order dispatch queue.",
+    "category": "application",
+    "severity": "L2",
+    "telemetry": {
+      "metrics_summary": "jvm_memory_used_bytes: orders=512MB (heap max reached), gc_pause_seconds=4.2s",
+      "logs_summary": "orders: java.lang.OutOfMemoryError: Java heap space at OrderService.createOrder",
+      "traces_summary": "trace_id=3b99c44: POST /orders failed with HTTP 500 from orders service"
+    }
+  },
+  {
+    "id": "RE2_shipping_SOCKET_1",
+    "benchmark": "RE2",
+    "system": "sock-shop",
+    "fault_type": "SOCKET",
+    "root_cause_service": "shipping",
+    "root_cause_indicator": "tcp_socket_abort_rate",
+    "inject_time": 1650000700,
+    "symptom": "Shipping address verification socket connections are being prematurely aborted with connection refused errors.",
+    "query": "Shipping calculation service is rejecting incoming TCP connections with connection reset by peer on port 8080.",
+    "context": "Runbook: Shipping Service Socket Aborts. Cause: File descriptor limit exhaustion or listen backlog queue full on shipping service. Fix: 1. Check ulimit -n file descriptors. 2. Increase net.core.somaxconn in container sysctl. 3. Restart shipping container.",
+    "reference": "The shipping calculation failures are caused by socket connection exhaustion (tcp_socket_abort_rate spike) on the shipping service due to full listen backlog. Increase container socket backlog and ulimit descriptors.",
+    "category": "network",
+    "severity": "L2",
+    "telemetry": {
+      "metrics_summary": "tcp_socket_abort_rate: shipping=88 aborts/sec (listen queue overflow)",
+      "logs_summary": "shipping: [ERROR] Failed to accept socket connection: Too many open files",
+      "traces_summary": "trace_id=8a22d19: POST /shipping failed with ECONNRESET"
+    }
+  },
+  {
+    "id": "RE2_user_DELAY_1",
+    "benchmark": "RE2",
+    "system": "sock-shop",
+    "fault_type": "DELAY",
+    "root_cause_service": "user",
+    "root_cause_indicator": "network_latency_ms",
+    "inject_time": 1650000800,
+    "symptom": "User login and registration requests taking over 5000ms; user service experiencing extreme network latency.",
+    "query": "User authentication and profile page loads are timing out across the Sock Shop storefront.",
+    "context": "Runbook: User Authentication Latency. Cause: Network egress delay injected between front-end and user service. Fix: 1. Trace login HTTP span. 2. Verify latency on user pod interface. 3. Remove network latency delay policy.",
+    "reference": "The authentication timeout is caused by network latency delay on the user service (network_latency_ms > 4500ms). Remove latency injection rule on the user service pod.",
+    "category": "network",
+    "severity": "L1",
+    "telemetry": {
+      "metrics_summary": "network_latency_ms: user service=4800ms (normal=12ms)",
+      "logs_summary": "front-end: [WARN] User service authentication timed out after 5000ms",
+      "traces_summary": "trace_id=2f44c88: POST /login span=5012ms status=TIMEOUT"
+    }
+  },
+  {
+    "id": "RE3_ts-order-service_F2_1",
+    "benchmark": "RE3",
+    "system": "train-ticket",
+    "fault_type": "F2",
+    "root_cause_service": "ts-order-service",
+    "root_cause_indicator": "NullPointerException",
+    "inject_time": 1650000900,
+    "symptom": "Train ticket booking requests crashing with HTTP 500 and java.lang.NullPointerException in ts-order-service.",
+    "query": "Train ticket booking API is failing with HTTP 500 errors and NullPointerException in ts-order-service during checkout.",
+    "context": "Runbook: Train Ticket Order Service Code Fault. Cause: F2 code-level bug: uninitialized account verification object causing NullPointerException in OrderServiceImpl. Fix: 1. Inspect stack trace in ts-order-service logs. 2. Deploy hotfix ensuring null-check on Account entity before order creation. 3. Restart ts-order-service.",
+    "reference": "The ticket booking crash is caused by an F2 code-level fault (NullPointerException) in ts-order-service when dereferencing an uninitialized Account object. Apply null check hotfix in OrderServiceImpl and redeploy.",
+    "category": "application",
+    "severity": "L2",
+    "telemetry": {
+      "metrics_summary": "http_server_requests_500_total: ts-order-service=142 errors in 60s",
+      "logs_summary": "ts-order-service: java.lang.NullPointerException: Cannot invoke 'Account.getId()' because 'account' is null at service.OrderServiceImpl.create(OrderServiceImpl.java:84)",
+      "traces_summary": "trace_id=6e11b05: POST /api/v1/orderservice/order/create span=120ms status=500"
+    }
+  },
+  {
+    "id": "RE3_ts-travel-service_DELAY_1",
+    "benchmark": "RE3",
+    "system": "train-ticket",
+    "fault_type": "DELAY",
+    "root_cause_service": "ts-travel-service",
+    "root_cause_indicator": "network_latency_ms",
+    "inject_time": 1650001000,
+    "symptom": "Train route query queries taking over 6000ms; ts-travel-service experiencing high upstream RPC latency.",
+    "query": "Train route search queries are hanging and timing out for passengers searching for train travel schedules.",
+    "context": "Runbook: Train Ticket Travel Service Network Latency. Cause: Network latency delay on ts-travel-service veth interface causing search schedule timeouts. Fix: 1. Trace schedule query call chain. 2. Verify network interface packet delay. 3. Reset network interface traffic control rules.",
+    "reference": "The travel schedule search timeouts are caused by severe network latency delay on ts-travel-service (network_latency_ms > 5000ms). Reset traffic control rules on ts-travel-service.",
+    "category": "network",
+    "severity": "L2",
+    "telemetry": {
+      "metrics_summary": "network_latency_ms: ts-travel-service=5600ms, route search p99=6100ms",
+      "logs_summary": "ts-travel-service: [WARN] Route query response took 5800ms",
+      "traces_summary": "trace_id=4c77d92: GET /api/v1/travelservice/routes span=5900ms status=TIMEOUT"
+    }
+  },
+  {
+    "id": "RE3_ts-auth-service_F4_1",
+    "benchmark": "RE3",
+    "system": "train-ticket",
+    "fault_type": "F4",
+    "root_cause_service": "ts-auth-service",
+    "root_cause_indicator": "infinite_loop_thread_starvation",
+    "inject_time": 1650001100,
+    "symptom": "Authentication service threads locked at 100% CPU due to F4 infinite loop in JWT token validation.",
+    "query": "Passenger login service is frozen; all ts-auth-service worker threads are stuck in an infinite loop consuming 100% CPU.",
+    "context": "Runbook: Train Ticket Auth Service Infinite Loop. Cause: F4 code-level bug: malformed while loop in TokenValidator without termination condition causing worker thread starvation. Fix: 1. Take thread dump with jstack. 2. Deploy patch with proper loop termination condition in TokenValidator.java. 3. Restart ts-auth-service.",
+    "reference": "The authentication outage is caused by an F4 code-level fault (infinite loop in TokenValidator) in ts-auth-service that starves worker threads at 100% CPU. Patch loop termination condition and redeploy ts-auth-service.",
+    "category": "cpu",
+    "severity": "L3",
+    "telemetry": {
+      "metrics_summary": "container_cpu_usage_seconds_total: ts-auth-service=4.0 (all 4 cores pinned at 100%)",
+      "logs_summary": "ts-auth-service: [FATAL] Thread pool exhausted: all 64 worker threads in RUNNABLE state at TokenValidator.validate",
+      "traces_summary": "trace_id=1b55a73: POST /api/v1/users/login timed out after 30000ms"
+    }
+  },
+  {
+    "id": "RE3_ts-ticketinfo-service_CPU_1",
+    "benchmark": "RE3",
+    "system": "train-ticket",
+    "fault_type": "CPU",
+    "root_cause_service": "ts-ticketinfo-service",
+    "root_cause_indicator": "container_cpu_usage_seconds_total",
+    "inject_time": 1650001200,
+    "symptom": "Ticket seat availability checks failing under holiday rush; ts-ticketinfo-service CPU throttled at 100%.",
+    "query": "Seat availability checks on train routes are failing with HTTP 503 Service Unavailable during holiday rush.",
+    "context": "Runbook: Train Ticket TicketInfo Service CPU Throttling. Cause: High volume seat calculation algorithms saturating ts-ticketinfo-service CPU limits. Fix: 1. Check CPU throttle metric. 2. Enable horizontal pod autoscaling (HPA) for ts-ticketinfo-service. 3. Cache seat query results.",
+    "reference": "The seat check failures are caused by CPU throttling on ts-ticketinfo-service (container_cpu_usage_seconds_total maxed out). Increase container CPU limits and enable HPA for ts-ticketinfo-service.",
+    "category": "cpu",
+    "severity": "L2",
+    "telemetry": {
+      "metrics_summary": "container_cpu_usage_seconds_total: ts-ticketinfo-service=1.98 (limit=2.0), cpu_throttled_seconds=42.1s",
+      "logs_summary": "ts-ticketinfo-service: [WARN] Request rejected: server thread pool queue capacity reached",
+      "traces_summary": "trace_id=9f22c11: GET /api/v1/ticketinfoservice/query span=4500ms status=503"
+    }
+  }
+]

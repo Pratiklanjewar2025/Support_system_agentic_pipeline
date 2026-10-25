@@ -1,0 +1,122 @@
+[
+  {
+    "id": "OpenRCA_telecom_001",
+    "benchmark": "OpenRCA",
+    "system": "telecom",
+    "fault_type": "connection_pool_timeout",
+    "root_cause_service": "hss-service",
+    "root_cause_indicator": "diameter_connection_pool_active",
+    "inject_time": 1655000100,
+    "symptom": "5G User Authentication failure rate surged to 34% across core network gateways.",
+    "query": "Mobile subscribers are experiencing cellular network attachment failures and authentication timeouts against the core network.",
+    "context": "Runbook: 5G Core Network HSS Diameter Connection Pool. Cause: Diameter protocol connection pool exhaustion on hss-service (Home Subscriber Server) under subscriber registration wave. Fix: 1. Verify active connection pool count on hss-service. 2. Scale hss-service connection pool capacity to 500. 3. Restart diameter gateway proxy.",
+    "reference": "The subscriber authentication failures are caused by Diameter connection pool exhaustion on the hss-service (Home Subscriber Server). Scale the diameter connection pool configuration and restart the gateway proxy.",
+    "category": "network",
+    "severity": "L3",
+    "telemetry": {
+      "metrics_summary": "diameter_connection_pool_active: hss-service=200/200 (100% capacity exhausted)",
+      "logs_summary": "hss-service: [ERROR] Diameter connection acquisition timed out after 5000ms",
+      "traces_summary": "trace_id=tel_901: Authentication-Information-Request span=5200ms status=DIAMETER_UNABLE_TO_DELIVER"
+    }
+  },
+  {
+    "id": "OpenRCA_telecom_002",
+    "benchmark": "OpenRCA",
+    "system": "telecom",
+    "fault_type": "memory_leak",
+    "root_cause_service": "smf-service",
+    "root_cause_indicator": "pdp_context_allocated_bytes",
+    "inject_time": 1655000200,
+    "symptom": "Session Management Function (SMF) pod terminating with OOMKilled exit code 137 under data session load.",
+    "query": "Session Management Function (SMF) pod crashed with OOMKilled exit code 137, dropping active user data sessions.",
+    "context": "Runbook: SMF Session Context Memory Leak. Cause: Leaked PDP context session handles in smf-service upon abnormal subscriber disconnect. Fix: 1. Check pdp_context_allocated_bytes metric. 2. Increase smf-service container memory to 2Gi. 3. Enable automatic stale PDP context reap timer.",
+    "reference": "The SMF pod crash is caused by a memory leak in PDP context handle retention in smf-service leading to an OOMKilled termination (exit code 137). Increase memory limit to 2Gi and configure stale context reaping.",
+    "category": "application",
+    "severity": "L2",
+    "telemetry": {
+      "metrics_summary": "pdp_context_allocated_bytes: smf-service=1.95Gi (exceeded 2.0Gi cgroup limit), exit_code=137",
+      "logs_summary": "smf-service: [CRITICAL] Memory allocation failed for PDU session establishment",
+      "traces_summary": "trace_id=tel_902: Nsmf_PDUSession_CreateSMContext failed with 500 Internal Server Error"
+    }
+  },
+  {
+    "id": "OpenRCA_bank_001",
+    "benchmark": "OpenRCA",
+    "system": "bank",
+    "fault_type": "db_deadlock",
+    "root_cause_service": "transaction-manager",
+    "root_cause_indicator": "postgres_deadlock_conflicts_total",
+    "inject_time": 1655000300,
+    "symptom": "Inter-account fund transfers deadlocking on account balance updates with PostgreSQL serialization failures.",
+    "query": "Banking core transaction transfer API is failing with SQL transaction deadlocks during concurrent account transfers.",
+    "context": "Runbook: Banking Transaction Manager Deadlock Resolution. Cause: Inconsistent account locking order (source vs destination account) in transaction-manager causing cross-transaction database deadlocks. Fix: 1. Enforce strict numerical order locking on account IDs. 2. Configure optimistic concurrency control for transfers. 3. Terminate deadlocked backend sessions in Postgres.",
+    "reference": "The transfer failures are caused by database deadlocks in the transaction-manager due to inconsistent account row locking order (postgres_deadlock_conflicts_total spike). Enforce strict account ID ordering before acquiring row-level locks.",
+    "category": "database",
+    "severity": "L3",
+    "telemetry": {
+      "metrics_summary": "postgres_deadlock_conflicts_total: database=48 deadlocks in 60s",
+      "logs_summary": "transaction-manager: org.postgresql.util.PSQLException: ERROR: deadlock detected on relation 'account_balance'",
+      "traces_summary": "trace_id=bank_101: POST /api/transfer span=3200ms status=DEADLOCK_DETECTED"
+    }
+  },
+  {
+    "id": "OpenRCA_bank_002",
+    "benchmark": "OpenRCA",
+    "system": "bank",
+    "fault_type": "cpu_overload",
+    "root_cause_service": "account-service",
+    "root_cause_indicator": "container_cpu_usage_seconds_total",
+    "inject_time": 1655000400,
+    "symptom": "Account history query API latency spiked to 6500ms; account-service CPU utilization at 100%.",
+    "query": "Customers cannot view bank account statement history; account-service is pinned at 100% CPU and timing out.",
+    "context": "Runbook: Account Service Statement Query CPU Overload. Cause: Sequential scan on unindexed transaction timestamp column in account-service database query. Fix: 1. Add index on (account_id, transaction_timestamp). 2. Add Redis query caching for account statement history. 3. Scale account-service pods.",
+    "reference": "The statement history query timeout is caused by CPU saturation on account-service (container_cpu_usage_seconds_total at 100%) due to unindexed full table scans. Add composite database index and cache statement queries in Redis.",
+    "category": "cpu",
+    "severity": "L2",
+    "telemetry": {
+      "metrics_summary": "container_cpu_usage_seconds_total: account-service=0.99 cores (limit=1.0)",
+      "logs_summary": "account-service: [WARN] Slow query detected: SELECT * FROM transactions WHERE account_id=? (time: 6200ms)",
+      "traces_summary": "trace_id=bank_102: GET /api/accounts/history span=6420ms status=GATEWAY_TIMEOUT"
+    }
+  },
+  {
+    "id": "OpenRCA_market_001",
+    "benchmark": "OpenRCA",
+    "system": "market",
+    "fault_type": "cpu_overload",
+    "root_cause_service": "order-matching-engine",
+    "root_cause_indicator": "queue_backlog_depth",
+    "inject_time": 1655000500,
+    "symptom": "Stock trading order execution delayed by 8500ms; order-matching-engine CPU overloaded.",
+    "query": "Trading order execution latency has spiked to over 8 seconds with order-matching-engine backlog accumulating.",
+    "context": "Runbook: Market Order Matching Engine CPU Contention. Cause: Runaway limit order book sorting queue in order-matching-engine under high market volatility. Fix: 1. Enable batch order processing mode. 2. Partition limit order book across symbol shards. 3. Allocate dedicated high-frequency CPU cores to matching engine.",
+    "reference": "The order execution delay is caused by CPU contention on the order-matching-engine as the order book queue depth accumulated during volatility. Partition order books by trading symbol shards and assign dedicated CPU cores.",
+    "category": "cpu",
+    "severity": "L3",
+    "telemetry": {
+      "metrics_summary": "queue_backlog_depth: order-matching-engine=24000 orders pending (limit=5000)",
+      "logs_summary": "order-matching-engine: [WARN] Order matching cycle exceeded 8000ms deadline",
+      "traces_summary": "trace_id=mkt_201: POST /api/v1/orders/place span=8520ms status=200"
+    }
+  },
+  {
+    "id": "OpenRCA_market_002",
+    "benchmark": "OpenRCA",
+    "system": "market",
+    "fault_type": "network_delay",
+    "root_cause_service": "market-data-gateway",
+    "root_cause_indicator": "network_latency_ms",
+    "inject_time": 1655000600,
+    "symptom": "Real-time stock price feed multicast experiencing 4000ms network latency jitter across market participants.",
+    "query": "Real-time ticker market data feed multicast has high packet latency and dropped price updates.",
+    "context": "Runbook: Market Data Gateway Network Jitter. Cause: Network interface buffer overrun and latency delay on market-data-gateway. Fix: 1. Check network_latency_ms on gateway multicast interface. 2. Increase socket receive buffer size (net.core.rmem_max). 3. Restart market-data-gateway multicast publisher.",
+    "reference": "The ticker feed lag is caused by network latency delay and buffer overrun on market-data-gateway (network_latency_ms > 3500ms). Increase socket receive buffer size and reset network multicast queue rules.",
+    "category": "network",
+    "severity": "L2",
+    "telemetry": {
+      "metrics_summary": "network_latency_ms: market-data-gateway=4100ms (baseline=5ms)",
+      "logs_summary": "market-data-gateway: [WARN] UDP multicast packet buffer overflow (1200 packets dropped)",
+      "traces_summary": "trace_id=mkt_202: MulticastPublisher.publish span=4150ms status=DELAYED"
+    }
+  }
+]

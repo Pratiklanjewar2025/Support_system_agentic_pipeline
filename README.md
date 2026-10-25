@@ -1,4 +1,4 @@
-﻿# 🤖 AI Technical Support Automation Platform
+# 🤖 AI Technical Support Automation Platform
 
 > A **multi-agent AI pipeline** that diagnoses, resolves, and escalates technical support tickets — fully automated, terminal-based, and powered by **LangGraph + Groq + RAG**.
 
@@ -9,6 +9,7 @@
 - [Overview](#overview)
 - [Features](#features)
 - [Architecture](#architecture)
+- [Incident Response Cache](#incident-response-cache)
 - [Agent Pipeline](#agent-pipeline)
 - [RAG Knowledge Base](#rag-knowledge-base)
 - [State Schema](#state-schema)
@@ -18,6 +19,8 @@
 - [Configuration](#configuration)
 - [Knowledge Base Management](#knowledge-base-management)
 - [Severity & Routing Logic](#severity--routing-logic)
+- [Public Benchmark & Evaluation Suite](#public-benchmark--evaluation-suite)
+- [Research Reproducibility](#research-reproducibility)
 - [Tech Stack](#tech-stack)
 
 ---
@@ -41,63 +44,115 @@ All agents run on the **Groq API** (`qwen/qwen3-27b`) for ultra-fast inference, 
 
 | Feature | Detail |
 |---|---|
+| ⚡ Incident Response Cache | Persistent exact (SHA-256) & semantic (SentenceTransformers) cache with context guards (0 LLM calls, $0.00) |
 | 🧠 Multi-Agent Pipeline | 6 specialized agents chained via LangGraph |
 | 📚 RAG Knowledge Base | Semantic search over Markdown runbooks / SOPs |
 | 🔍 Root Cause Analysis | Grounded LLM reasoning with confidence scoring |
 | 🛠️ Auto Resolution | Numbered, command-level fix instructions |
 | ✅ Verification Gate | SRE-style safety check before closing |
 | 🚨 Auto Escalation | L3 issues or unsafe fixes routed to human engineers |
+| 📊 Phase 8 Metric Suite | Diagnostic Quality (Hit@1, Top-k, Macro-F1), Reliability (Brier, ECE), Efficiency & 95% CIs |
+| 🔬 Phase 9 Reproducibility | Non-overwriting immutable run dirs, per-case JSONL/CSV, paired tests, and vector plots |
 | 🎨 Rich Terminal UI | Colorized, step-by-step output with timing |
 | ⚡ Fast Inference | Groq-hosted LLM — sub-second response per agent |
 
 ---
 
-## Architecture
+## Architecture: AdaRAG-Ops Pipeline
 
 ```
-User Query
-    │
-    ▼
-┌─────────────────────────────────────────────────────────────┐
-│                   main.py  (Terminal UI)                    │
-└────────────────────────┬────────────────────────────────────┘
-                         │ graph.stream()
-                         ▼
-┌─────────────────────────────────────────────────────────────┐
-│             LangGraph Agent Pipeline  (agents/)             │
-│                                                             │
-│  ┌──────────┐   ┌──────────────┐   ┌────────────┐          │
-│  │Classifier│──▶│  Knowledge   │──▶│ Diagnostic │          │
-│  │  Agent   │   │    Agent     │   │   Agent    │          │
-│  └──────────┘   └──────┬───────┘   └─────┬──────┘          │
-│                        │ RAG              │                 │
-│                        ▼                 ▼                 │
-│               ┌────────────────┐  ┌────────────┐           │
-│               │  FAISS Index   │  │ Resolution │           │
-│               │  + Runbooks    │  │   Agent    │           │
-│               └────────────────┘  └─────┬──────┘           │
-│                                         │                  │
-│                                         ▼                  │
-│                                  ┌────────────┐            │
-│                                  │Verification│            │
-│                                  │   Agent    │            │
-│                                  └─────┬──────┘            │
-│                          verified?     │                   │
-│                        ┌──────┴──────┐ │                   │
-│                     YES│             │NO / L3              │
-│                        ▼             ▼                     │
-│                  ┌──────────┐  ┌──────────┐                │
-│                  │  Close   │  │Escalation│                │
-│                  │ Ticket ✅│  │ Agent 🚨 │                │
-│                  └──────────┘  └──────────┘                │
-└─────────────────────────────────────────────────────────────┘
-                         │
-                         ▼  (all LLM agents)
-              ┌──────────────────────┐
-              │   Groq API           │
-              │   qwen/qwen3-27b     │
-              └──────────────────────┘
+                                  ┌──────────────────────────────┐
+                                  │   User Technical Incident    │
+                                  └──────────────┬───────────────┘
+                                                 │
+                                                 ▼
+                                  ┌──────────────────────────────┐
+                                  │    Classifier Agent          │
+                                  │    Category & Severity (L1-3)│
+                                  └──────────────┬───────────────┘
+                                                 │
+                                                 ▼
+                                  ┌──────────────────────────────┐
+                                  │    Knowledge Agent (RAG)     │
+                                  │    FAISS Dense Index Search  │
+                                  └──────────────┬───────────────┘
+                                                 │
+                                                 ▼
+                                  ┌──────────────────────────────┐
+                                  │   Adaptive Model Router 🔀   │
+                                  │   Dual-Signal Quality Engine │
+                                  │   Pareto Utility Evaluator   │
+                                  └──────────────┬───────────────┘
+                                                 │
+                ┌────────────────────────────────┼────────────────────────────────┐
+                ▼                                ▼                                ▼
+       [Tier 1: Fast / Low Cost]        [Tier 2: High Reasoning]         [Tier 3: Heavy / Long-Ctx]
+       Cohere / Groq 20B                Google Gemini 2.5 Flash          Cohere Command-R+ (104B)
+       $0.15 / 1M tokens | ~1.8s        High F1 / Structured | ~4.2s     Enterprise Complex | ~8.5s
+                │                                │                                │
+                └────────────────────────────────┼────────────────────────────────┘
+                                                 ▼
+                                  ┌──────────────────────────────┐
+                                  │   Diagnostic Agent (RCA)     │
+                                  │   Root Cause & Needs Esc.    │
+                                  └──────────────┬───────────────┘
+                                                 │
+                                                 ▼
+                                  ┌──────────────────────────────┐
+                                  │   Resolution Agent (Fix)     │
+                                  │   Numbered Actionable Steps  │
+                                  └──────────────┬───────────────┘
+                                                 │
+                                                 ▼
+                                  ┌──────────────────────────────┐
+                                  │   Verification Agent 🛡️      │
+                                  │   Grounding & Safety Check   │
+                                  └──────────────┬───────────────┘
+                                                 │
+                                  ┌──────────────┴──────────────┐
+                                  │                             │
+                          Verified == True              Verified == False
+                                  │                             │
+                                  ▼                             ▼
+                        ┌──────────────────┐          ┌───────────────────┐
+                        │ Close Ticket ✅  │          │ Model Escalation? │
+                        │ (Resolved Plan)  │          └─────────┬─────────┘
+                        └──────────────────┘                    │
+                                            ┌───────────────────┴───────────────────┐
+                                            ▼                                       ▼
+                                  [Level == 0 & Tier != 3]                 [Level >= 1 or L3]
+                                  Escalate to Tier 3 (104B)                Escalate to Human SRE
+                                  + Active Re-Retrieval                    (Detailed RCA Hand-off)
 ```
+
+---
+
+## Incident Response Cache
+
+AdaRAG-Ops implements a persistent, SQLite-backed exact and semantic Incident Response Cache (`agents/incident_response_cache.py`) situated at the earliest entry point in the LangGraph graph execution.
+
+### Architectural Rule
+**Check the response cache before invoking any LLM or agent. If a safe cache hit exists, return the saved verified response immediately with 0 LLM calls, $0.00 model generation cost, and minimal lookup latency (<0.01s).**
+
+### Three-Stage Lookup Strategy
+1. **Stage A: Deterministic Exact Match (SHA-256):** Queries normalized fingerprint against verified records. Returns saved response in under 5ms.
+2. **Stage B: Guarded Semantic Match (SentenceTransformers):** Computes local embedding via `all-MiniLM-L6-v2` ($0 API cost). Compares cosine similarity against verified records with configurable similarity threshold (default `0.95`, adjustable to `0.85` for relaxed phrasing).
+   - **Context Guards:** Validates affected service (e.g. `postgres` vs `redis`) and error signature (e.g. `exit code 137` vs `exit code 1`). Rejects false-positive matches even if embedding similarity is >95%.
+3. **Stage C: Normal Diagnostic Pipeline:** Executes full multi-agent diagnostic and verification workflow on cache miss. Verified resolutions are automatically saved into the cache for future reuse.
+
+### Cache Benchmark Optimization Results
+
+Evaluated over a representative 20-incident workload stream (`benchmark_incident_cache.py`):
+
+| Metric | A: No Cache (Baseline) | B: Exact Cache Only | C: Exact + Semantic Cache |
+|---|---|---|---|
+| **Cache Hit Rate (%)** | 0.0% | 30.0% (6 hits) | **40.0%** (5 exact + 3 semantic) |
+| **Cache Precision** | N/A | 100.0% | **100.0%** |
+| **Incorrect Cache Rate** | N/A | 0.0% | **0.0%** |
+| **Diagnostic Accuracy** | 100.0% | 100.0% | **100.0%** |
+| **Mean LLM Calls / Req** | 6.10 | 4.45 (**-27.1%**) | **3.90 (-36.1%)** |
+| **Total LLM Cost ($)** | $0.00651 | $0.00488 (**+25.0%**) | **$0.00432 (+33.7%)** |
+| **Lookup Overhead** | 0.00 ms | 6.53 ms | 26.90 ms |
 
 ---
 
@@ -177,76 +232,34 @@ A **senior SRE reviewer** checks whether the proposed resolution is complete, sa
 
 ### Step 5a — Close Ticket (orchestrator)
 
-If `verified == True`, the pipeline assembles and returns the final resolved answer.
+---
+
+### Step 5 — Verification Agent & Evidence-Grounded Diagnosis (`agents/verification_agent.py`)
+
+Performs claim-level verification of the proposed diagnostic root cause and resolution against retrieved documentation, generating structured diagnostic claims:
+- **10 Standard Operational Fields**: Incident summary, suspected root cause, affected component, supporting evidence, contradictory/missing evidence, alternative explanations, confidence estimate & meaning, advisory remediation, verification status, and escalation/abstention reason.
+- **Claim Categorization**: Distinguishes `observed_fact`, `inferred_root_cause`, and `recommended_action`.
+- **Anti-Hallucination & Grounding**: Strictly audits source identifiers against retrieved runbooks.
+- **Advisory Remediation Safety Guard**: Scans for destructive operations (`rm -rf`, `drop table`, `kill -9`, etc.), prohibits automated execution, and enforces advisory designation (`is_advisory=True`).
+- **Uncertainty Status**: Emits explicit uncertainty when telemetry is missing rather than manufacturing a definitive root cause.
 
 ---
 
-### Step 5b — Escalation Agent (`agents/escalation_agent.py`)
+### Phase 6 — Public Benchmark Integration (`benchmarks/` & `PUBLIC_BENCHMARKS.md`)
 
-If `verified == False`, a professional RCA escalation report is generated for handoff to a human engineer, including issue summary, root cause, what was investigated, recommended next steps, and risk level.
+Provides an adapter layer and leakage-free evaluation harness for public microservice benchmarks:
+- **RCAEval Integration**: Online Boutique, Sock Shop, and Train Ticket across RE1, RE2, and RE3 suites.
+- **OpenRCA Integration**: Enterprise 5G Telecom, Banking, and Market Trading systems.
+- **Supplementary Suite**: Retains PostgreSQL, Kubernetes, and TLS baseline scenarios.
+- **Leakage-Free Splitting**: Grouped partitioning by `(system, service, fault)` preventing data contamination.
+- **Generalization Testing**: Zero-shot transfer to unseen microservice topologies (`--split cross_system`) and unseen fault categories (`--split cross_fault`).
 
----
+```bash
+# Run RCAEval test split
+python benchmark_public_datasets.py --dataset rcaeval --split test
 
-## RAG Knowledge Base
-
-```
-documents/*.md
-      │
-      ▼ chunk (500 chars, 100 overlap)
-SentenceTransformer (all-MiniLM-L6-v2)
-      │
-      ▼ encode → float32 embeddings
-FAISS IndexFlatL2
-      │
-      ▼ persist
-  faiss_index/index.faiss + chunks.pkl
-```
-
-### Current Knowledge Base Documents
-
-| File | Description |
-|---|---|
-| `checkout-api-runbook.md` | Runbook for the Checkout API service |
-| `deployment-rollback-sop.md` | SOP for deployment rollbacks |
-| `payments-high-cpu-runbook.md` | Runbook for high CPU on the Payments service |
-
-### RAG Configuration
-
-| Parameter | Default | Description |
-|---|---|---|
-| `CHUNK_SIZE` | `500` | Characters per document chunk |
-| `CHUNK_OVERLAP` | `100` | Overlap between consecutive chunks |
-| `TOP_K` | `2` (agent) | Chunks retrieved per query |
-| Embedding model | `all-MiniLM-L6-v2` | Local SentenceTransformer |
-
----
-
-## State Schema
-
-```python
-class AgentState(TypedDict):
-    user_query: str          # Input from the user
-
-    category: str            # deployment | database | cpu | network | application | general
-    severity: str            # L1 | L2 | L3
-    summary: str             # One-line issue summary
-
-    kb_results: List[dict]   # [{text, source, score}]
-    kb_context: str          # Formatted KB context for LLM prompts
-
-    root_cause: str          # Diagnosed root cause
-    confidence: str          # high | medium | low
-
-    resolution_steps: str    # Numbered fix instructions
-    resolution_status: str   # resolved | needs_human
-
-    verified: bool           # Whether solution passed verification
-    verification_notes: str  # Reviewer notes
-
-    escalated: bool          # Whether ticket was escalated
-    escalation_reason: str   # Reason for escalation
-
-    final_answer: str        # Answer displayed to the user
+# Test zero-shot generalization on unseen Train Ticket system
+python benchmark_public_datasets.py --dataset rcaeval --split cross_system --unseen-target train-ticket
 ```
 
 ---
@@ -257,18 +270,37 @@ class AgentState(TypedDict):
 Technical_agent/
 │
 ├── main.py                         # Entry point — terminal UI, pipeline runner
-├── .env                            # API keys (GROQ_API_KEY)
+├── benchmark_public_datasets.py    # Phase 6 Public Benchmark Runner (RCAEval & OpenRCA)
+├── test_public_benchmark.py        # Phase 6 Benchmark unit & integration tests
+├── test_evidence_grounded_diagnosis.py # Phase 5 Structured diagnosis test suite
+├── test_adaptive_execution.py      # Phase 4 Adaptive execution & budget tracking tests
+├── test_intervention_policy.py     # Phase 3 Intervention policy test suite
+├── PUBLIC_BENCHMARKS.md            # Public benchmark architecture & manual setup guide
+├── .env                            # API keys (GROQ_API_KEY, GEMINI_API_KEY)
 ├── requirements.txt                # Python dependencies
 │
 ├── agents/
-│   ├── state.py                    # Shared AgentState TypedDict
-│   ├── orchestrator.py             # LangGraph graph builder & routing logic
+│   ├── state.py                    # Shared AgentState TypedDict (Phases 1-6)
+│   ├── orchestrator.py             # LangGraph graph builder & adaptive conditional dispatch
 │   ├── classifier_agent.py         # Step 1 — Issue classification
 │   ├── knowledge_agent.py          # Step 2 — KB retrieval
+│   ├── router_agent.py             # Adaptive multi-LLM router & intervention policies
+│   ├── confidence_estimator.py     # Phase 2 — Calibrated confidence estimator
+│   ├── intervention_policy.py      # Phase 3 — Constrained decision policy & evidence auditor
 │   ├── diagnostic_agent.py         # Step 3 — Root cause analysis
 │   ├── resolution_agent.py         # Step 4 — Resolution generation
-│   ├── verification_agent.py       # Step 5 — Safety verification
+│   ├── verification_agent.py       # Step 5 — Safety verification & structured diagnosis
+│   ├── diagnostic_claims.py        # Phase 5 — Structured diagnostic claims & safety guards
 │   └── escalation_agent.py         # Step 5b — Human escalation report
+│
+├── benchmarks/
+│   ├── dataset_adapter.py          # Unified adapter layer (RCAEval, OpenRCA, Supplementary)
+│   ├── runner.py                   # Multi-metric benchmark engine (RCA Hit@1, F1, Safety)
+│   └── __init__.py
+│
+├── datasets/                       # Bundled offline benchmark fixtures
+│   ├── rcaeval/cases.json          # RCAEval multi-system failure cases
+│   └── openrca/cases.json          # OpenRCA enterprise failure cases
 │
 ├── rag/
 │   └── retriever.py                # FAISS index builder & semantic retriever
@@ -334,6 +366,9 @@ The FAISS index is built automatically on the first run.
 Ask your question > My deployment is failing with exit code 1
 Ask your question > The checkout API is returning 502 errors
 Ask your question > Payments service CPU is at 95%
+Ask your question > cache            ← view live cache telemetry, hits, and avoided cost
+Ask your question > cache-clear      ← administratively purge all cached records
+Ask your question > cache-toggle     ← toggle incident response cache on / off
 Ask your question > rebuild          ← re-indexes the knowledge base
 Ask your question > exit             ← quit
 ```
@@ -342,9 +377,14 @@ Ask your question > exit             ← quit
 
 ## Configuration
 
-| Variable | Required | Description |
-|---|---|---|
-| `GROQ_API_KEY` | ✅ Yes | Groq API key for LLM inference |
+| Variable | Required | Default | Description |
+|---|---|---|---|
+| `GROQ_API_KEY` | ✅ Yes | — | Groq API key for primary LLM inference |
+| `INCIDENT_CACHE_ENABLED` | ⚙️ Optional | `true` | Master toggle for incident response cache |
+| `INCIDENT_CACHE_SEMANTIC_ENABLED` | ⚙️ Optional | `true` | Enables sentence embedding similarity search |
+| `INCIDENT_CACHE_SIMILARITY_THRESHOLD` | ⚙️ Optional | `0.95` | Cosine threshold for semantic matching (e.g., `0.85` - `0.95`) |
+| `INCIDENT_CACHE_TTL_SECONDS` | ⚙️ Optional | `86400` | Cache time-to-live expiration (seconds) |
+| `INCIDENT_CACHE_DB_PATH` | ⚙️ Optional | `artifacts/cache/incident_cache.db` | SQLite persistence database location |
 
 ### Agent LLM Settings
 

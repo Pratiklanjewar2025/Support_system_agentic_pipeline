@@ -1,0 +1,19 @@
+{
+  "strategy": "intervention",
+  "constraints": {
+    "target_quality": 0.68,
+    "max_latency_budget": 12.0,
+    "max_cost_budget": 0.006,
+    "max_risk_threshold": 1.6,
+    "max_retries": 2
+  },
+  "actions_supported": [
+    "ANSWER",
+    "RETRIEVE_MORE",
+    "SWITCH_MODEL",
+    "SAMPLE_CANDIDATES",
+    "ABSTAIN",
+    "HUMAN_REVIEW"
+  ],
+  "description": "Intervention-aware policy for quality-constrained cost minimization."
+}

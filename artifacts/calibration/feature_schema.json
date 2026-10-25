@@ -1,0 +1,136 @@
+{
+  "version": "2.0.0",
+  "target": "diagnostic_correctness",
+  "definition": "P(Correct | X) represents the probability that the root cause analysis and resolution steps will safely and completely resolve the incident, calibrated against ground-truth validation.",
+  "features": {
+    "query_complexity": {
+      "index": 0,
+      "type": "float",
+      "range": [
+        0.0,
+        1.0
+      ]
+    },
+    "incident_type_enc": {
+      "index": 1,
+      "type": "float",
+      "range": [
+        0.0,
+        1.0
+      ]
+    },
+    "top1_similarity": {
+      "index": 2,
+      "type": "float",
+      "range": [
+        0.0,
+        1.0
+      ]
+    },
+    "mean_similarity": {
+      "index": 3,
+      "type": "float",
+      "range": [
+        0.0,
+        1.0
+      ]
+    },
+    "min_similarity": {
+      "index": 4,
+      "type": "float",
+      "range": [
+        0.0,
+        1.0
+      ]
+    },
+    "evidence_coverage": {
+      "index": 5,
+      "type": "float",
+      "range": [
+        0.0,
+        1.0
+      ]
+    },
+    "num_independent_sources": {
+      "index": 6,
+      "type": "float",
+      "range": [
+        0.0,
+        1.0
+      ]
+    },
+    "evidence_redundancy": {
+      "index": 7,
+      "type": "float",
+      "range": [
+        0.0,
+        1.0
+      ]
+    },
+    "evidence_disagreement": {
+      "index": 8,
+      "type": "float",
+      "range": [
+        0.0,
+        1.0
+      ]
+    },
+    "has_logs_signal": {
+      "index": 9,
+      "type": "float",
+      "range": [
+        0.0,
+        1.0
+      ]
+    },
+    "has_metrics_signal": {
+      "index": 10,
+      "type": "float",
+      "range": [
+        0.0,
+        1.0
+      ]
+    },
+    "has_traces_signal": {
+      "index": 11,
+      "type": "float",
+      "range": [
+        0.0,
+        1.0
+      ]
+    },
+    "model_historical_f1": {
+      "index": 12,
+      "type": "float",
+      "range": [
+        0.0,
+        1.0
+      ]
+    },
+    "model_historical_faith": {
+      "index": 13,
+      "type": "float",
+      "range": [
+        0.0,
+        1.0
+      ]
+    },
+    "verification_passed": {
+      "index": 14,
+      "type": "float",
+      "range": [
+        0.0,
+        1.0
+      ]
+    },
+    "missing_evidence_ratio": {
+      "index": 15,
+      "type": "float",
+      "range": [
+        0.0,
+        1.0
+      ]
+    }
+  },
+  "distinction_from_retrieval": "Retrieval confidence R_c solely measures embedding distance. Calibrated confidence evaluates context completeness, technical log clarity, model capacity, and verification grounding."
+}

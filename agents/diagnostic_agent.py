@@ -49,6 +49,14 @@ Based on the above, identify the root cause."""
     raw = re.sub(r"^```[a-z]*\n?", "", raw)
     raw = re.sub(r"\n?```$", "", raw)
 
+    state["model_call_count"] = (state.get("model_call_count") or 0) + 1
+    from agents.llm_utils import estimate_token_cost
+    in_tok = int(len(user_prompt.split()) * 1.3)
+    out_tok = int(len(raw.split()) * 1.3)
+    c_delta = estimate_token_cost(in_tok, out_tok, model=model, provider=provider)
+    state["actual_cost"] = round((state.get("actual_cost") or 0.0) + c_delta, 6)
+    state["budget_spent"] = state["actual_cost"]
+
     try:
         data = json.loads(raw)
         state["root_cause"] = data.get("root_cause", "Unknown root cause")
