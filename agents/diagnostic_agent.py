@@ -41,7 +41,22 @@ Based on the above, identify the root cause."""
         SystemMessage(content=SYSTEM_PROMPT),
         HumanMessage(content=user_prompt),
     ]
-    response = llm.invoke(messages)
+    try:
+        response = llm.invoke(messages)
+    except Exception as e:
+        err_str = str(e).lower()
+        if any(w in err_str for w in ("503", "overloaded", "upstream", "rate limit", "429")):
+            fallback_llm = None
+            if os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"):
+                fallback_llm = get_llm(temperature=0.1, max_tokens=400, provider="gemini", model="gemini-2.5-flash")
+            elif os.getenv("GROQ_API_KEY"):
+                fallback_llm = get_llm(temperature=0.1, max_tokens=400, provider="groq", model="openai/gpt-oss-20b")
+            if fallback_llm:
+                response = fallback_llm.invoke(messages)
+            else:
+                raise e
+        else:
+            raise e
     raw = response.content
     if isinstance(raw, list):
         raw = raw[0].get("text", str(raw[0])) if isinstance(raw[0], dict) else str(raw[0])

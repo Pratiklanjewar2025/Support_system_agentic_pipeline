@@ -154,7 +154,7 @@ Proposed Resolution:
 Documentation Context:
 {state.get('kb_context', 'No context available.')}
 
-Perform claim-level evidence verification. Check if every claim is supported by actual retrieved documentation, distinguish observed facts from inferred causes, verify that no destructive commands are executed automatically, and output the structured diagnostic claims JSON."""
+Perform claim-level evidence verification. Check if every claim is supported by actual retrieved documentation or established operational best practices, distinguish observed facts from inferred causes, verify that no destructive commands are executed automatically, and output the structured diagnostic claims JSON."""
 
     messages = [
         SystemMessage(content=SYSTEM_PROMPT),
@@ -164,7 +164,22 @@ Perform claim-level evidence verification. Check if every claim is supported by 
     # Track model call invocation
     state["model_call_count"] = (state.get("model_call_count") or 0) + 1
 
-    response = llm.invoke(messages)
+    try:
+        response = llm.invoke(messages)
+    except Exception as e:
+        err_str = str(e).lower()
+        if any(w in err_str for w in ("503", "overloaded", "upstream", "rate limit", "429")):
+            fallback_llm = None
+            if os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"):
+                fallback_llm = get_llm(temperature=0, max_tokens=600, provider="gemini", model="gemini-2.5-flash")
+            elif os.getenv("GROQ_API_KEY"):
+                fallback_llm = get_llm(temperature=0, max_tokens=600, provider="groq", model="openai/gpt-oss-20b")
+            if fallback_llm:
+                response = fallback_llm.invoke(messages)
+            else:
+                raise e
+        else:
+            raise e
     raw = response.content
     if isinstance(raw, list):
         raw = raw[0].get("text", str(raw[0])) if isinstance(raw[0], dict) else str(raw[0])

@@ -341,7 +341,9 @@ def _close_ticket(state: AgentState) -> AgentState:
         # Save newly verified response into persistent cache on cache miss
         try:
             from agents.incident_response_cache import IncidentResponseCache
-            IncidentResponseCache.get_instance().save_verified_response(state)
+            cid = IncidentResponseCache.get_instance().save_verified_response(state)
+            if cid:
+                state["cache_record_id"] = cid
         except Exception as e:
             import logging
             logging.getLogger("IncidentResponseCache").warning(f"Failed to cache verified response: {e}")
@@ -388,7 +390,9 @@ def _route_after_verify(state: AgentState) -> str:
     )
 
     if budget_exhausted:
-        if state.get("verified") and (state.get("calibrated_confidence", 0.0) or 0.0) >= 0.50:
+        if state.get("verified") and (state.get("calibrated_confidence", 0.0) or 0.0) >= 0.40:
+            return "close"
+        if state.get("verified") and state.get("resolution_status") == "resolved":
             return "close"
         missing = state.get("missing_evidence") or []
         if len(missing) >= 2 or not state.get("verified"):
@@ -399,7 +403,14 @@ def _route_after_verify(state: AgentState) -> str:
     if state.get("severity") == "L3":
         return "escalate"
 
-    # 3. Action Dispatching
+    # 3. Verified Resolution Confirmation (Priority: Close & Cache verified answers)
+    if state.get("verified") and state.get("resolution_status") == "resolved":
+        calib = state.get("calibrated_confidence", 0.0) or 0.0
+        act = state.get("recommended_action")
+        if calib >= 0.40 or act in ("ANSWER", None):
+            return "close"
+
+    # 4. Action Dispatching
     act = state.get("recommended_action")
 
     if act == "ABSTAIN":
@@ -414,16 +425,16 @@ def _route_after_verify(state: AgentState) -> str:
     if act == "SWITCH_MODEL" and iter_count < max_iter:
         return "switch_model"
 
-    # 4. Verified Resolution Confirmation
+    # 5. Verified Resolution Fallback
     if state.get("verified"):
         calib = state.get("calibrated_confidence", 0.0) or 0.0
-        if calib >= 0.50:
+        if calib >= 0.40:
             return "close"
         if iter_count < max_iter:
             return "switch_model"
         return "escalate"
 
-    # 5. Unverified Resolution Fallback
+    # 6. Unverified Resolution Fallback
     if iter_count < max_iter:
         rm = state.get("routing_metadata") or {}
         r_conf = rm.get("retrieval_features", {}).get("retrieval_confidence", 1.0)

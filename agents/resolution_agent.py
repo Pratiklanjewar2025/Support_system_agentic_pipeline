@@ -37,7 +37,22 @@ Generate step-by-step resolution instructions."""
         SystemMessage(content=SYSTEM_PROMPT),
         HumanMessage(content=user_prompt),
     ]
-    response = llm.invoke(messages)
+    try:
+        response = llm.invoke(messages)
+    except Exception as e:
+        err_str = str(e).lower()
+        if any(w in err_str for w in ("503", "overloaded", "upstream", "rate limit", "429")):
+            fallback_llm = None
+            if os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY"):
+                fallback_llm = get_llm(temperature=0.2, max_tokens=600, provider="gemini", model="gemini-2.5-flash")
+            elif os.getenv("GROQ_API_KEY"):
+                fallback_llm = get_llm(temperature=0.2, max_tokens=600, provider="groq", model="openai/gpt-oss-20b")
+            if fallback_llm:
+                response = fallback_llm.invoke(messages)
+            else:
+                raise e
+        else:
+            raise e
     content = response.content
     if isinstance(content, list):
         content = content[0].get("text", str(content[0])) if isinstance(content[0], dict) else str(content[0])

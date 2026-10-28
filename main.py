@@ -385,6 +385,7 @@ def main():
     print(f"  {bold('How to use:')}")
     print(f"    * Describe your technical problem and press Enter")
     print(f"    * Type  {cyan('cache')}         to inspect cache telemetry & cost savings")
+    print(f"    * Type  {cyan('cache-add')}     to directly store a verified incident into cache")
     print(f"    * Type  {cyan('cache-clear')}   to purge persistent cache records")
     print(f"    * Type  {cyan('cache-toggle')}  to enable/disable incident cache")
     print(f"    * Type  {cyan('rebuild')}       to refresh the knowledge base")
@@ -405,6 +406,29 @@ def main():
             break
         if query.lower() == "cache":
             print_cache_metrics()
+            continue
+        if query.lower() == "cache-add":
+            print(cyan("\n  [+] Store Incident in Cache"))
+            q_in = input(bold("    Enter query: ")).strip()
+            if not q_in:
+                print(yellow("    Query cannot be empty. Aborted."))
+                continue
+            rc_in = input(bold("    Enter root cause: ")).strip()
+            st_in = input(bold("    Enter resolution steps: ")).strip()
+            cat_in = input(bold("    Enter category (deployment/database/cpu/network/general) [general]: ")).strip() or "general"
+            sev_in = input(bold("    Enter severity (L1/L2) [L1]: ")).strip() or "L1"
+            from agents.incident_response_cache import IncidentResponseCache
+            cid = IncidentResponseCache.get_instance().store_query(
+                query=q_in,
+                root_cause=rc_in,
+                resolution_steps=st_in,
+                category=cat_in,
+                severity=sev_in
+            )
+            if cid:
+                print(green(f"\n  [OK] Incident cached successfully! Record ID: {bold(cid)}\n"))
+            else:
+                print(red("\n  [ERROR] Failed to save to cache.\n"))
             continue
         if query.lower() == "cache-clear":
             from agents.incident_response_cache import IncidentResponseCache

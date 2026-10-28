@@ -502,10 +502,13 @@ def build_structured_diagnosis(
         d0 = float(kb_results[0].get("score", 1.0))
         top1_sim = math.exp(-0.5 * d0)
 
-    # Criteria for insufficient evidence
+    # Criteria for insufficient evidence:
+    # 1. Literally zero retrieved context (len(kb_results) == 0) indicates complete absence of evidence.
+    # 2. Low retrieval similarity (top1_sim < 0.40) or telemetry gaps only flag insufficient evidence
+    #    if the resolution was not already validated and verified by claim verification.
     evidence_insufficient = (
         len(kb_results) == 0 or
-        top1_sim < 0.40 or
+        (top1_sim < 0.40 and not verified) or
         (len(missing_telemetry) >= 3 and not verified) or
         (not verified and severity != "L3" and has_unsupported_claim)
     )

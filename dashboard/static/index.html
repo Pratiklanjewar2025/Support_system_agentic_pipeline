@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AdaRAG-Ops | Autonomous SRE Incident Command Dashboard</title>
+  <meta name="description" content="AI Technical Support and Autonomous Operational Incident Diagnosis Dashboard with real-time multi-agent streaming and terminal CLI interface.">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
+</head>
+<body>
+
+  <!-- ========================================================================
+       Top Navigation & System Status Bar
+       ======================================================================== -->
+  <header class="app-header" id="app-header">
+    <div class="brand-section">
+      <div class="brand-logo" id="brand-logo">⚡</div>
+      <div class="brand-title-wrap">
+        <div class="brand-title">
+          AdaRAG-Ops <span class="version-tag">v2.0 • SRE Copilot</span>
+        </div>
+        <div class="brand-subtitle">Autonomous Incident Diagnosis & Multi-Agent Resolution Platform</div>
+      </div>
+    </div>
+
+    <!-- Live Status Chips -->
+    <div class="header-status-chips" id="header-status-chips">
+      <div class="status-chip" title="LangGraph Multi-Agent Execution Engine">
+        <span class="status-indicator-dot online" id="status-engine-dot"></span>
+        <span>Engine: <strong id="lbl-engine-status" style="color:var(--text-heading);">Online</strong></span>
+      </div>
+      <div class="status-chip" title="Pre-LLM Exact and Semantic Incident Cache">
+        <span class="status-indicator-dot active-cyan" id="status-cache-dot"></span>
+        <span>Cache Guard: <strong id="lbl-cache-count" style="color:var(--text-cyan);">9 Records</strong></span>
+      </div>
+      <div class="status-chip" title="FAISS Vector Knowledge Base">
+        <span>📚 Runbooks: <strong id="lbl-kb-count" style="color:var(--text-green);">3 Indexed</strong></span>
+      </div>
+    </div>
+
+    <!-- Top Action Buttons -->
+    <div class="header-actions">
+      <button class="btn-header" id="btn-open-presets" title="Select pre-configured real incident scenarios">
+        <span>⚡</span> Presets
+      </button>
+      <button class="btn-header" id="btn-open-cache-modal" title="Inspect persistent SQLite incident cache">
+        <span>🛡️</span> Cache Explorer
+      </button>
+      <button class="btn-header" id="btn-open-kb-modal" title="View indexed runbooks and rebuild vector store">
+        <span>📖</span> Runbooks
+      </button>
+      <button class="btn-header primary" id="btn-open-status-modal" title="View system providers and telemetry">
+        <span>⚙️</span> System HUD
+      </button>
+    </div>
+  </header>
+
+  <!-- ========================================================================
+       Main Application Grid
+       ======================================================================== -->
+  <main class="main-container" id="main-container">
+
+    <!-- ======================================================================
+         Left / Center: Interactive Ops Terminal
+         ====================================================================== -->
+    <section class="terminal-panel-card" id="terminal-panel-card">
+      
+      <!-- Terminal Header / Window Chrome -->
+      <div class="terminal-header" id="terminal-header">
+        <div class="terminal-window-controls">
+          <span class="window-btn close" id="win-btn-close" title="Clear screen"></span>
+          <span class="window-btn minimize" id="win-btn-min"></span>
+          <span class="window-btn maximize" id="win-btn-max"></span>
+        </div>
+
+        <div class="terminal-title">
+          <span>🖥️</span> ops-terminal@adarag:~/incident-pipeline (<span class="session-badge">zsh • live</span>)
+        </div>
+
+        <div class="terminal-actions-bar">
+          <button class="btn-term-action" id="btn-clear-term" title="Clear terminal screen (Ctrl+L)">
+            <span>🧹</span> Clear
+          </button>
+          <button class="btn-term-action" id="btn-copy-term" title="Copy session log to clipboard">
+            <span>📋</span> Copy Log
+          </button>
+          <button class="btn-term-action active" id="btn-autoscroll" title="Toggle automatic scroll to bottom">
+            <span>⏬</span> Auto-scroll
+          </button>
+        </div>
+      </div>
+
+      <!-- Terminal Output Screen -->
+      <div class="terminal-screen" id="terminal-screen">
+        <!-- ASCII Banner -->
+        <pre class="terminal-ascii-banner" id="terminal-ascii-banner">
+   ██████╗ ██████╗  █████╗ ██████╗  █████╗  ██████╗          ██████╗ ██████╗ ███████╗
+  ██╔══██╗██╔══██╗██╔══██╗██╔══██╗██╔══██╗██╔════╝         ██╔═══██╗██╔══██╗██╔════╝
+  ███████║██║  ██║███████║██████╔╝███████║██║  ███╗ █████╗ ██║   ██║██████╔╝███████╗
+  ██╔══██║██║  ██║██╔══██║██╔══██╗██╔══██║██║   ██║ ╚════╝ ██║   ██║██╔═══╝ ╚════██║
+  ██║  ██║██████╔╝██║  ██║██║  ██║██║  ██║╚██████╔╝         ╚██████╔╝██║     ███████║
+  ╚═╝  ╚═╝╚═════╝ ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝           ╚═════╝ ╚═╝     ╚══════╝
+        </pre>
+
+        <!-- Welcome Box -->
+        <div class="term-welcome-box" id="term-welcome-box">
+          <div class="title">⚡ AI Technical Support Automation Platform — Terminal Console</div>
+          <div class="hint-list">
+            <div>• Type your support query or describe any system incident below to run the live multi-agent pipeline.</div>
+            <div>• Type <span class="hint-command">cache</span> to inspect exact & semantic cache telemetry and dollar savings.</div>
+            <div>• Type <span class="hint-command">cache-clear</span> to purge persistent SQLite cache records.</div>
+            <div>• Type <span class="hint-command">cache-toggle</span> to enable/disable incident cache guard.</div>
+            <div>• Type <span class="hint-command">rebuild</span> to force refresh the FAISS runbook knowledge base.</div>
+            <div>• Type <span class="hint-command">help</span> for full command reference or use the quick suggestion pills below.</div>
+          </div>
+        </div>
+
+        <!-- Dynamic Message Stream Container -->
+        <div id="terminal-messages-stream" style="display:flex; flex-direction:column; gap:14px;"></div>
+
+        <!-- Live Working Spinner (Active Pipeline Step) -->
+        <div class="term-live-working" id="term-live-working" style="display:none;">
+          <div class="term-spinner"></div>
+          <span id="term-live-status-text">Multi-agent AI pipeline analyzing incident...</span>
+        </div>
+      </div>
+
+      <!-- Terminal Interactive Input Row -->
+      <div class="terminal-input-wrapper" id="terminal-input-wrapper">
+        <form id="terminal-input-form" onsubmit="event.preventDefault(); window.submitTerminalQuery();" style="display:contents;">
+          <div class="terminal-prompt-row">
+            <span class="terminal-prompt-symbol">ops@support-ai:~$</span>
+            <input 
+              type="text" 
+              id="terminal-input" 
+              class="terminal-text-input" 
+              placeholder="Describe technical issue, or type 'help', 'cache', 'rebuild'..." 
+              autocomplete="off" 
+              spellcheck="false"
+              autofocus
+            />
+            <button type="submit" class="btn-terminal-send" id="btn-terminal-send" title="Send Query (Enter)">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="22" y1="2" x2="11" y2="13"></line>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+              </svg>
+            </button>
+          </div>
+        </form>
+
+        <!-- Quick Action Suggestion Pills -->
+        <div class="terminal-pills-row" id="terminal-pills-row">
+          <button class="quick-pill cache-hit-pill" data-query="How do I restart the checkout service?" title="Triggers instant 0-cost cache hit">
+            <span>⚡</span> Restart Checkout (Cache Hit Test)
+          </button>
+          <button class="quick-pill" data-query="PostgreSQL database memory is getting exhausted with spikes in active connections and max_connections exceeded.">
+            <span>⚡</span> Postgres Memory Spike
+          </button>
+          <button class="quick-pill" data-query="Kubernetes API gateway pod is in CrashLoopBackOff with OOMKilled exit code 137.">
+            <span>⚡</span> K8s Pod OOMKilled
+          </button>
+          <button class="quick-pill" data-query="Checkout API returning 500 Internal Server Error with database connection timeout and latency spikes.">
+            <span>⚡</span> Checkout API 500
+          </button>
+          <button class="quick-pill" data-command="cache">
+            <span>💻</span> cache
+          </button>
+          <button class="quick-pill" data-command="cache-toggle">
+            <span>🛡️</span> cache-toggle
+          </button>
+          <button class="quick-pill" data-command="rebuild">
+            <span>🔄</span> rebuild
+          </button>
+          <button class="quick-pill" data-command="help">
+            <span>❓</span> help
+          </button>
+        </div>
+      </div>
+
+    </section>
+
+    <!-- ======================================================================
+         Right Panel: Multi-Agent Pipeline Topology & Telemetry HUD
+         ====================================================================== -->
+    <aside class="sidebar-panel" id="sidebar-panel">
+
+      <!-- Telemetry Stats Cards Grid -->
+      <div class="telemetry-grid">
+        <div class="telemetry-card" id="card-telemetry-latency">
+          <div class="telemetry-card-header">
+            <span>Incident Latency</span>
+            <span>⏱️</span>
+          </div>
+          <div class="telemetry-card-val cyan" id="val-telemetry-latency">0.00s</div>
+          <div class="telemetry-card-sub" id="sub-telemetry-latency">Wall-clock execution time</div>
+        </div>
+
+        <div class="telemetry-card" id="card-telemetry-cost">
+          <div class="telemetry-card-header">
+            <span>Avoided Cost</span>
+            <span>💰</span>
+          </div>
+          <div class="telemetry-card-val green" id="val-telemetry-cost">$0.00</div>
+          <div class="telemetry-card-sub" id="sub-telemetry-cost"><span id="val-saved-calls">0</span> LLM calls avoided</div>
+        </div>
+
+        <div class="telemetry-card" id="card-telemetry-cache">
+          <div class="telemetry-card-header">
+            <span>Cache Hit Rate</span>
+            <span>🎯</span>
+          </div>
+          <div class="telemetry-card-val purple" id="val-telemetry-hitrate">0.0%</div>
+          <div class="telemetry-card-sub" id="sub-telemetry-hits"><span id="val-total-hits">0</span> hits / <span id="val-total-lookups">0</span> lookups</div>
+        </div>
+
+        <div class="telemetry-card" id="card-telemetry-confidence">
+          <div class="telemetry-card-header">
+            <span>Calibrated Conf.</span>
+            <span>📊</span>
+          </div>
+          <div class="telemetry-card-val amber" id="val-telemetry-confidence">--</div>
+          <div class="telemetry-card-sub" id="sub-telemetry-confidence">ECE Reliability Band</div>
+        </div>
+      </div>
+
+      <!-- Live Multi-Agent Pipeline Topology Card -->
+      <div class="pipeline-card" id="pipeline-card">
+        <div class="pipeline-header">
+          <div class="pipeline-title">
+            <span>🧬</span> Agent Pipeline Topology
+          </div>
+          <div class="pipeline-status-badge" id="pipeline-active-badge">STANDBY</div>
+        </div>
+
+        <!-- Sequence of Agent Nodes -->
+        <div class="pipeline-nodes-list" id="pipeline-nodes-list">
+
+          <!-- Node 1: Incident Cache -->
+          <div class="pipe-node-item" id="node-item-cache_lookup" data-node="cache_lookup" title="Pre-LLM Zero-Cost SQLite Cache Guard">
+            <div class="pipe-node-dot">1</div>
+            <div class="pipe-node-info">
+              <div class="pipe-node-name">
+                <span>🛡️ Incident Cache Guard</span>
+                <span class="pipe-node-time" id="time-node-cache_lookup">--</span>
+              </div>
+              <div class="pipe-node-detail" id="detail-node-cache_lookup">Exact & Semantic Cosine Guard</div>
+            </div>
+          </div>
+
+          <!-- Node 2: Classifier -->
+          <div class="pipe-node-item" id="node-item-classify" data-node="classify" title="Query Classification into L1/L2/L3 Severity & Category">
+            <div class="pipe-node-dot">2</div>
+            <div class="pipe-node-info">
+              <div class="pipe-node-name">
+                <span>🏷️ Ticket Classifier</span>
+                <span class="pipe-node-time" id="time-node-classify">--</span>
+              </div>
+              <div class="pipe-node-detail" id="detail-node-classify">Category & Severity triage</div>
+            </div>
+          </div>
+
+          <!-- Node 3: Knowledge Search (RAG) -->
+          <div class="pipe-node-item" id="node-item-knowledge_search" data-node="knowledge_search" title="FAISS Vector Store Retrieval over SRE Runbooks">
+            <div class="pipe-node-dot">3</div>
+            <div class="pipe-node-info">
+              <div class="pipe-node-name">
+                <span>📚 Knowledge Retrieval (RAG)</span>
+                <span class="pipe-node-time" id="time-node-knowledge_search">--</span>
+              </div>
+              <div class="pipe-node-detail" id="detail-node-knowledge_search">FAISS L2 distance search</div>
+            </div>
+          </div>
+
+          <!-- Node 4: Evidence Auditor -->
+          <div class="pipe-node-item" id="node-item-evidence_assessment" data-node="evidence_assessment" title="Telemetry & Evidence Coverage Assessment">
+            <div class="pipe-node-dot">4</div>
+            <div class="pipe-node-info">
+              <div class="pipe-node-name">
+                <span>🔍 Evidence Quality Auditor</span>
+                <span class="pipe-node-time" id="time-node-evidence_assessment">--</span>
+              </div>
+              <div class="pipe-node-detail" id="detail-node-evidence_assessment">Lexical coverage & telemetry audit</div>
+            </div>
+          </div>
+
+          <!-- Node 5: Adaptive Router -->
+          <div class="pipe-node-item" id="node-item-router" data-node="router" title="Pareto-Optimal Multi-LLM Tier Selection">
+            <div class="pipe-node-dot">5</div>
+            <div class="pipe-node-info">
+              <div class="pipe-node-name">
+                <span>🔀 Adaptive Model Router</span>
+                <span class="pipe-node-time" id="time-node-router">--</span>
+              </div>
+              <div class="pipe-node-detail" id="detail-node-router">Pareto utility model selection</div>
+            </div>
+          </div>
+
+          <!-- Node 6: Diagnostic RCA -->
+          <div class="pipe-node-item" id="node-item-diagnose" data-node="diagnose" title="Root Cause Analysis Grounded in Evidence">
+            <div class="pipe-node-dot">6</div>
+            <div class="pipe-node-info">
+              <div class="pipe-node-name">
+                <span>🩺 Diagnostic RCA Agent</span>
+                <span class="pipe-node-time" id="time-node-diagnose">--</span>
+              </div>
+              <div class="pipe-node-detail" id="detail-node-diagnose">Evidence-grounded RCA</div>
+            </div>
+          </div>
+
+          <!-- Node 7: Resolution Engine -->
+          <div class="pipe-node-item" id="node-item-resolve" data-node="resolve" title="Generates Actionable Advisory Remediation Plan">
+            <div class="pipe-node-dot">7</div>
+            <div class="pipe-node-info">
+              <div class="pipe-node-name">
+                <span>🔧 Resolution Engine</span>
+                <span class="pipe-node-time" id="time-node-resolve">--</span>
+              </div>
+              <div class="pipe-node-detail" id="detail-node-resolve">Actionable remediation steps</div>
+            </div>
+          </div>
+
+          <!-- Node 8: Verification Agent -->
+          <div class="pipe-node-item" id="node-item-verify" data-node="verify" title="Claim-Level Grounding and Safety Check">
+            <div class="pipe-node-dot">8</div>
+            <div class="pipe-node-info">
+              <div class="pipe-node-name">
+                <span>✅ Verification Agent</span>
+                <span class="pipe-node-time" id="time-node-verify">--</span>
+              </div>
+              <div class="pipe-node-detail" id="detail-node-verify">Claim-level safety check</div>
+            </div>
+          </div>
+
+          <!-- Node 9: Final Outcome -->
+          <div class="pipe-node-item" id="node-item-close" data-node="close" title="Ticket Packaging, Telemetry & Cache Persistence">
+            <div class="pipe-node-dot">9</div>
+            <div class="pipe-node-info">
+              <div class="pipe-node-name">
+                <span>📦 Outcome & Cache Persist</span>
+                <span class="pipe-node-time" id="time-node-close">--</span>
+              </div>
+              <div class="pipe-node-detail" id="detail-node-close">Persisted for 0-cost retrieval</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Cache Quick Manager Widget -->
+      <div class="cache-control-widget" id="cache-control-widget">
+        <div class="cache-widget-header">
+          <span>Incident Cache Controls</span>
+          <span style="font-size:11px; color:var(--text-cyan);" id="lbl-cache-db-records">9 in DB</span>
+        </div>
+
+        <div class="cache-toggle-row">
+          <span>Cache Guard Lookup</span>
+          <label class="toggle-switch">
+            <input type="checkbox" id="chk-cache-toggle" checked>
+            <span class="toggle-slider"></span>
+          </label>
+        </div>
+
+        <div class="cache-actions-grid">
+          <button class="btn-cache-action" id="btn-quick-cache-view">
+            <span>🔍</span> View Records
+          </button>
+          <button class="btn-cache-action danger" id="btn-quick-cache-clear">
+            <span>🗑️</span> Purge Cache
+          </button>
+        </div>
+      </div>
+
+    </aside>
+
+  </main>
+
+  <!-- ========================================================================
+       MODAL 1: Incident Cache Explorer
+       ======================================================================== -->
+  <div class="modal-backdrop" id="modal-cache">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>🛡️</span> Incident Response Cache Explorer
+        </div>
+        <button class="btn-modal-close" data-close="modal-cache">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div style="font-size:12px; color:var(--text-muted);">
+            Persistent SQLite database (`artifacts/cache/incident_cache.db`). Stores verified resolutions for sub-20ms instant 0-cost replay.
+          </div>
+          <button class="btn-header" id="btn-refresh-cache-table">🔄 Refresh</button>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table" id="table-cache-records">
+            <thead>
+              <tr>
+                <th>Service</th>
+                <th>Query</th>
+                <th>Severity</th>
+                <th>Hits</th>
+                <th>Model</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="tbody-cache-records">
+              <tr><td colspan="6" style="text-align:center; color:var(--text-dim);">Loading cached incidents...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 2: Runbooks & Knowledge Base Explorer
+       ======================================================================== -->
+  <div class="modal-backdrop" id="modal-kb">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>📖</span> Knowledge Base & SRE Runbooks
+        </div>
+        <button class="btn-modal-close" data-close="modal-kb">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div style="font-size:12px; color:var(--text-muted);">
+            Indexed documentation in `documents/` chunked into FAISS vector space with `all-MiniLM-L6-v2`.
+          </div>
+          <button class="btn-header primary" id="btn-trigger-rebuild">🔄 Rebuild Vector Index</button>
+        </div>
+
+        <div id="kb-documents-container" style="display:flex; flex-direction:column; gap:12px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 3: Presets Selector
+       ======================================================================== -->
+  <div class="modal-backdrop" id="modal-presets">
+    <div class="modal-dialog" style="max-width:700px;">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>⚡</span> Select Operational Incident Preset
+        </div>
+        <button class="btn-modal-close" data-close="modal-presets">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="presets-list-container" style="display:flex; flex-direction:column; gap:10px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================
+       MODAL 4: System Telemetry & Architecture HUD
+       ======================================================================== -->
+  <div class="modal-backdrop" id="modal-status">
+    <div class="modal-dialog" style="max-width:680px;">
+      <div class="modal-header">
+        <div class="modal-title">
+          <span>⚙️</span> System Architecture & Telemetry HUD
+        </div>
+        <button class="btn-modal-close" data-close="modal-status">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="system-hud-content" style="display:flex; flex-direction:column; gap:14px; font-size:13px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Client Application Script -->
+  <script src="/static/app.js"></script>
+</body>
+</html>
