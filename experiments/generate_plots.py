@@ -388,17 +388,19 @@ def plot_category_breakdown(
 
 def generate_all_publication_plots(
     summary_path: Path = DEFAULT_SUMMARY_PATH,
-    master_log_path: Path = DEFAULT_MASTER_LOG_PATH
+    master_log_path: Path = DEFAULT_MASTER_LOG_PATH,
+    output_dir: Optional[Path] = None
 ) -> List[Path]:
     """Generates all 5 publication-quality figures directly from experimental output records."""
     print("=" * 85)
     print("   ADARAG-OPS: GENERATING DATA-DRIVEN PUBLICATION FIGURES (PHASE 7)")
     print("=" * 85)
-    p1 = plot_reliability_diagram(summary_path=summary_path)
-    p2 = plot_quality_vs_cost_pareto(summary_path=summary_path)
-    p3 = plot_risk_coverage_curve(master_log_path=master_log_path)
-    p4 = plot_latency_distribution(summary_path=summary_path)
-    p5 = plot_category_breakdown(master_log_path=master_log_path)
+    output_dirs = [Path(output_dir)] if output_dir is not None else None
+    p1 = plot_reliability_diagram(summary_path=summary_path, output_dirs=output_dirs)
+    p2 = plot_quality_vs_cost_pareto(summary_path=summary_path, output_dirs=output_dirs)
+    p3 = plot_risk_coverage_curve(master_log_path=master_log_path, output_dirs=output_dirs)
+    p4 = plot_latency_distribution(summary_path=summary_path, output_dirs=output_dirs)
+    p5 = plot_category_breakdown(master_log_path=master_log_path, output_dirs=output_dirs)
     print("=" * 85)
     print(f"[OK] Generated 5 publication figures (PNG + SVG) in: {FIGURES_DIR} and {PAPER_FIGURES_DIR}")
     return [p1, p2, p3, p4, p5]

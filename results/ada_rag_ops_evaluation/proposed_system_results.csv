@@ -1,0 +1,706 @@
+query_id,query,category,severity,complexity_score,retrieval_confidence,router_selected_tier,router_selected_model,executed_provider,pipeline_latency_sec,pipeline_latency_ms,input_tokens,output_tokens,total_tokens,api_cost_usd,verification_status,verified_safe,final_answer,technical_correctness,faithfulness,actionability,completeness,safety,overall_quality,judge_explanation
+Q01_TECH_502,Checkout API is returning HTTP 502 Bad Gateway immediately following a new release to production.,deployment,L2,0.2861,0.6652,tier1_fast,Groq GPT-OSS 20B,groq,22.383,22383.0,868,908,1776,0.0001776,verified,True,"✅  RESOLVED
+
+**Root Cause:** Readiness probe failures caused the new checkout‑api pods to be marked unhealthy immediately after deployment, so the load balancer routed traffic to non‑ready instances, resulting in 502 Bad Gateway responses.
+
+**Resolution Steps:**
+1. Verify the deployment time: `kubectl get deployment checkout-api -n prod -o jsonpath='{.metadata.creationTimestamp}'` and compare it to the incident start time.  
+2. Check pod health: `kubectl get pods -n prod -l app=checkout-api -o wide` and ensure all pods are in `Running` state.  
+3. Inspect readiness probe failures: `kubectl describe pod <pod-name> -n prod | grep -A5 'Readiness'` to confirm why pods were marked unhealthy.  
+4. If readiness probes are failing, correct the probe configuration in the deployment YAML (e.g., adjust `httpGet.path` or `initialDelaySeconds`) and apply it: `kubectl apply -f checkout-api-deployment.yaml -n prod`.  
+5. Restart the deployment to roll out the fixed probe: `kubectl rollout restart deployment/checkout-api -n prod`.  
+6. Confirm the load balancer routes traffic to ready pods: `kubectl get pods -n prod -l app=checkout-api -o jsonpath='{.items[*].status.conditions[?(@.type==""Ready"")].status}'` should return `True` for all pods.
+
+**Verification:** Auto-verified (parse error in LLM response)
+
+**Engineered Model:** Groq GPT-OSS 20B [tier1_fast] (Provider: GROQ | Retrieval Conf: 66.5% | Calibrated Correctness: 74.8% | Policy: ANSWER)
+**Budget & Performance:** Actual Cost: $0.00013 (Est: $0.00000) | Actual Latency: 22.27s | Loops: 0 | Model Calls: 4
+
+### Evidence-Grounded Structured Diagnosis (Phase 5)
+- **Incident Summary:** API returns 502 Bad Gateway immediately after new production release
+- **Affected Component:** Checkout API
+- **Suspected Root Cause:** Readiness probe failures caused the new checkout‑api pods to be marked unhealthy immediately after deployment, so the load balancer routed traffic to non‑ready instances, resulting in 502 Bad Gateway responses.
+- **Verification Status:** `VERIFIED`
+
+#### 1. Observed Facts vs. Inferred Root Causes
+**Observed Facts (Direct Telemetry/Query):**
+- [Fact] Observed HTTP 502 Gateway / Proxy response errors
+**Inferred Root Causes (Hypotheses):**
+- [Hypothesis] Readiness probe failures caused the new checkout‑api pods to be marked unhealthy immediately after deployment, so the load balancer routed traffic to non‑ready instances, resulting in 502 Bad Gateway responses.
+
+#### 2. Supporting Evidence & Source Identifiers
+- **[1] `checkout-api-runbook.md`** (Distance: 1.002): ""# Checkout API Production Runbook
+
+## Service overview
+The Checkout API receives checkout requests from the web application and communicates with the Payment Ga...""
+- **[2] `checkout-api-runbook.md`** (Distance: 1.208): ""responses begin immediately after a release, the on-call engineer should use the following order of checks:
+
+1. Compare the incident start time with the latest ...""
+
+#### 3. Contradictory or Missing Evidence
+- **Missing Telemetry Gaps (2 items):**
+  - metrics (missing CPU, memory, IOPS, or p99 latency timeseries)
+  - traces (missing distributed trace IDs, span latencies, or RPC dependency map)
+- **Contradictory Signals:** None identified in current evidence
+
+#### 4. Alternative Explanations Considered
+- Upstream backend service crashed or was not ready to accept connections after deployment.
+- Reverse proxy connection timeout configured lower than backend response processing latency.
+- Ingress routing or DNS misconfiguration directing requests to terminated endpoints.
+
+#### 5. Confidence Estimate & Meaning
+- **Confidence Score:** 74.8% (`HIGH`)
+- **Operational Meaning:** Calibrated probability (74.8%) [HIGH]. The diagnosis is strongly supported by 2 retrieved runbook documents with claim-level verification passing. Confidence is sufficient for advisory remediation under human supervision.
+
+#### 6. Recommended Remediation (Advisory Only)
+- **Safety Level:** `SAFE` | **Advisory Only:** `True`
+- **Advisory Warning:** All remediation steps are advisory guidance. Ensure system backups and pre-execution safety checks before applying.
+
+**Prescribed Steps:**
+1. 1. Verify the deployment time: `kubectl get deployment checkout-api -n prod -o jsonpath='{.metadata.creationTimestamp}'` and compare it to the incident start time.
+2. 2. Check pod health: `kubectl get pods -n prod -l app=checkout-api -o wide` and ensure all pods are in `Running` state.
+3. 3. Inspect readiness probe failures: `kubectl describe pod <pod-name> -n prod | grep -A5 'Readiness'` to confirm why pods were marked unhealthy.
+4. 4. If readiness probes are failing, correct the probe configuration in the deployment YAML (e.g., adjust `httpGet.path` or `initialDelaySeconds`) and apply it: `kubectl apply -f checkout-api-deployment.yaml -n prod`.
+5. 5. Restart the deployment to roll out the fixed probe: `kubectl rollout restart deployment/checkout-api -n prod`.
+6. 6. Confirm the load balancer routes traffic to ready pods: `kubectl get pods -n prod -l app=checkout-api -o jsonpath='{.items[*].status.conditions[?(@.type==""Ready"")].status}'` should return `True` for all pods.",4.5,5.0,5.0,4.0,5.0,4.7,"The response correctly identifies readiness‑probe failures as the cause of the 502 errors and provides concrete kubectl commands to verify and remediate the issue, matching the runbook guidance. It omits mention of container startup latency and the suggested rollback (undo) path, so it is slightly less complete than the reference answer."
+Q02_TECH_DB_CONN,PostgreSQL database is throwing FATAL: remaining connection slots are reserved for non-replication superuser connections.,database,L2,0.2861,0.6179,tier1_fast,Groq GPT-OSS 20B,groq,25.787,25787.0,831,825,1656,0.0001656,verified,True,"✅  RESOLVED
+
+**Root Cause:** Connection pool exhaustion – the checkout‑api service is opening more PostgreSQL connections than the database’s max_connections allows, leaving only the reserved slots for superusers. Idle or leaked connections are not being closed, causing the pool to saturate.
+
+**Resolution Steps:**
+1. Connect to PostgreSQL and list current connections:  
+   `psql -U <user> -d <db> -c ""SELECT pid, usename, state, query_start FROM pg_stat_activity;""`  
+
+2. Identify idle connections older than 10 min:  
+   `psql -U <user> -d <db> -c ""SELECT pid FROM pg_stat_activity WHERE state='idle' AND now() - query_start > interval '10 minutes';""`  
+
+3. Terminate those idle connections:  
+   `psql -U <user> -d <db> -c ""SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE state='idle' AND now() - query_start > interval '10 minutes';""`  
+
+4. Check checkout‑api’s pool size (e.g., `max_pool_size`) and reduce it if it exceeds PostgreSQL’s `max_connections`; then restart the service:
+
+**Verification:** Auto-verified (parse error in LLM response)
+
+**Engineered Model:** Groq GPT-OSS 20B [tier1_fast] (Provider: GROQ | Retrieval Conf: 61.8% | Calibrated Correctness: 78.3% | Policy: ANSWER)
+**Budget & Performance:** Actual Cost: $0.00012 (Est: $0.00000) | Actual Latency: 25.56s | Loops: 0 | Model Calls: 4
+
+### Evidence-Grounded Structured Diagnosis (Phase 5)
+- **Incident Summary:** PostgreSQL connection slots exhausted, causing fatal error.
+- **Affected Component:** PostgreSQL
+- **Suspected Root Cause:** Connection pool exhaustion – the checkout‑api service is opening more PostgreSQL connections than the database’s max_connections allows, leaving only the reserved slots for superusers. Idle or leaked connections are not being closed, causing the pool to saturate.
+- **Verification Status:** `VERIFIED`
+
+#### 1. Observed Facts vs. Inferred Root Causes
+**Observed Facts (Direct Telemetry/Query):**
+- [Fact] Reported incident symptom: PostgreSQL database is throwing FATAL: remaining connection slots are reserved for non-replication superuser connections
+**Inferred Root Causes (Hypotheses):**
+- [Hypothesis] Connection pool exhaustion – the checkout‑api service is opening more PostgreSQL connections than the database’s max_connections allows, leaving only the reserved slots for superusers. Idle or leaked connections are not being closed, causing the pool to saturate.
+
+#### 2. Supporting Evidence & Source Identifiers
+- **[1] `checkout-api-runbook.md`** (Distance: 0.989): ""Review Redis latency; checkout-api uses Redis for session tokens and cart state.
+3. Verify the Payment Gateway is healthy — its /health endpoint should return 2...""
+- **[2] `checkout-api-runbook.md`** (Distance: 1.465): ""er than 10 minutes, and increase max_connections if recurring.
+
+## High error rate on /checkout endpoint
+- PagerDuty threshold: >5% 5xx for 5 minutes.
+- Confirm...""
+
+#### 3. Contradictory or Missing Evidence
+- **Missing Telemetry Gaps (1 items):**
+  - traces (missing distributed trace IDs, span latencies, or RPC dependency map)
+- **Contradictory Signals:** None identified in current evidence
+
+#### 4. Alternative Explanations Considered
+- Uncommitted long-running transaction or orphaned lock preventing schema alterations.
+- Storage volume I/O saturation or disk exhaustion on the primary database node.
+- Replication lag / network partition between primary and standby replicas.
+
+#### 5. Confidence Estimate & Meaning
+- **Confidence Score:** 78.3% (`HIGH`)
+- **Operational Meaning:** Calibrated probability (78.3%) [HIGH]. The diagnosis is strongly supported by 2 retrieved runbook documents with claim-level verification passing. Confidence is sufficient for advisory remediation under human supervision.
+
+#### 6. Recommended Remediation (Advisory Only)
+- **Safety Level:** `SAFE` | **Advisory Only:** `True`
+- **Advisory Warning:** All remediation steps are advisory guidance. Ensure system backups and pre-execution safety checks before applying.
+
+**Prescribed Steps:**
+1. 1. Connect to PostgreSQL and list current connections:
+2. `psql -U <user> -d <db> -c ""SELECT pid, usename, state, query_start FROM pg_stat_activity;""`
+3. 2. Identify idle connections older than 10 min:
+4. `psql -U <user> -d <db> -c ""SELECT pid FROM pg_stat_activity WHERE state='idle' AND now() - query_start > interval '10 minutes';""`
+5. 3. Terminate those idle connections:
+6. `psql -U <user> -d <db> -c ""SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE state='idle' AND now() - query_start > interval '10 minutes';""`
+7. 4. Check checkout‑api’s pool size (e.g., `max_pool_size`) and reduce it if it exceeds PostgreSQL’s `max_connections`; then restart the service:",5.0,5.0,5.0,4.0,5.0,4.8,"The response correctly identifies connection‑pool exhaustion as the cause and provides accurate pg_stat_activity queries and pg_terminate_backend usage, matching the runbook. It offers concrete, safe remediation steps, though it omits the optional max_connections increase and PgBouncer check, so completeness is slightly lower."
+Q03_TECH_K8S_UNDO,What is the exact command to undo the previous Kubernetes deployment revision?,application,L1,0.35,0.6,tier1_fast,cache:openai/gpt-oss-20b,cache,0.392,392.0,863,668,1531,0.0001531,N/A,True,"✅  RESOLVED
+
+**Root Cause:** User lacks knowledge of the correct Kubernetes rollback command
+
+**Resolution Steps:**
+1. Identify the deployment name and namespace (e.g., `my-app` in `prod`).  
+2. View rollout history to confirm the previous revision: `kubectl rollout history deployment/my-app -n prod`.  
+3. Roll back to the last healthy revision: `kubectl rollout undo deployment/my-app -n prod`.  
+4. Verify the rollout status: `kubectl rollout status deployment/my-app -n prod`.  
+5. Check pod status to ensure all replicas are running: `kubectl get pods -l app=my-app -n prod`.  
+6. Confirm the application is functioning as expected.
+
+**Verification:** Auto-verified (parse error in LLM response)
+
+⚡ **Incident Response Cache HIT [SEMANTIC (Cosine Similarity: 0.9973)]:** Record ID: `CACHE_e81518020b67d94b_1793257577`
+**Zero-Cost Bypass:** 0 LLM API calls | $0.00000 LLM Generation Cost | Cache Lookup Latency: 0.3744s
+**Originating Model:** cache:openai/gpt-oss-20b | Calibrated Correctness: 82.3%
+
+### Evidence-Grounded Structured Diagnosis (Phase 5)
+- **Incident Summary:** Command to rollback previous Kubernetes deployment revision
+- **Affected Component:** Kubernetes deployment
+- **Suspected Root Cause:** User lacks knowledge of the correct Kubernetes rollback command
+- **Verification Status:** `VERIFIED`
+
+#### 1. Observed Facts vs. Inferred Root Causes
+**Observed Facts (Direct Telemetry/Query):**
+- [Fact] Reported incident symptom: the command to undo the previous Kubernetes deployment revision
+**Inferred Root Causes (Hypotheses):**
+- [Hypothesis] User lacks knowledge of the correct Kubernetes rollback command
+
+#### 2. Supporting Evidence & Source Identifiers
+- **[1] `deployment-rollback-sop.md`** (Distance: 0.615): ""nshots.
+- Announce the rollback in the incident channel.
+- Verify that database migrations are backward-compatible; if they are not, a rollback may require a se...""
+- **[2] `deployment-rollback-sop.md`** (Distance: 0.794): ""# Production Deployment Rollback SOP
+
+A rollback is appropriate when a newly deployed version is strongly correlated with a customer-impacting regression and re...""
+
+#### 3. Contradictory or Missing Evidence
+- **Missing Telemetry Gaps (3 items):**
+  - logs (missing container stack traces, stdout/stderr, or exit codes)
+  - metrics (missing CPU, memory, IOPS, or p99 latency timeseries)
+  - traces (missing distributed trace IDs, span latencies, or RPC dependency map)
+- **Contradictory Signals:** None identified in current evidence
+
+#### 4. Alternative Explanations Considered
+- Hardware or host node-level resource contention in the shared cluster.
+- Configuration drift or environment variable mismatch applied during recent deployment.
+
+#### 5. Confidence Estimate & Meaning
+- **Confidence Score:** 82.3% (`HIGH`)
+- **Operational Meaning:** Calibrated probability (82.3%) [HIGH]. The diagnosis is strongly supported by 2 retrieved runbook documents with claim-level verification passing. Confidence is sufficient for advisory remediation under human supervision.
+
+#### 6. Recommended Remediation (Advisory Only)
+- **Safety Level:** `SAFE` | **Advisory Only:** `True`
+- **Advisory Warning:** All remediation steps are advisory guidance. Ensure system backups and pre-execution safety checks before applying.
+
+**Prescribed Steps:**
+1. 1. Identify the deployment name and namespace (e.g., `my-app` in `prod`).
+2. 2. View rollout history to confirm the previous revision: `kubectl rollout history deployment/my-app -n prod`.
+3. 3. Roll back to the last healthy revision: `kubectl rollout undo deployment/my-app -n prod`.
+4. 4. Verify the rollout status: `kubectl rollout status deployment/my-app -n prod`.
+5. 5. Check pod status to ensure all replicas are running: `kubectl get pods -l app=my-app -n prod`.
+6. 6. Confirm the application is functioning as expected.",5.0,4.5,5.0,4.5,5.0,4.8,"The response provides the exact rollback command from the runbook and correctly adds status monitoring, which aligns with the expected answer. It stays within the scope of the runbook, adds useful but not contradictory steps, and does not propose any unsafe actions."
+Q04_ZERO_DB_INSPECT,What is the zero-cost procedure to safely inspect and terminate idle PostgreSQL connections without service downtime?,database,L1,0.3032,0.5132,tier0_zero_cost,NVIDIA Nemotron 3 Ultra 550B (Free),openrouter,81.267,81267.0,829,1562,2391,0.0002391,verified,True,"✅  RESOLVED
+
+**Root Cause:** PostgreSQL connection pool saturation caused by accumulation of idle connections exceeding max_connections, leading to 'FATAL: remaining connection slots are reserved' errors
+
+**Resolution Steps:**
+The user wants a zero-cost procedure to safely inspect and terminate idle PostgreSQL connections without service downtime. The root cause is connection pool saturation from idle connections exceeding max_connections, causing ""FATAL: remaining connection slots are reserved"" errors.
+
+From the runbook snippets:
+- Check PostgreSQL connection pool saturation via pg_stat_activity.
+- Action: check current connection count, kill idle connections older than 10 minutes, and increase max_connections if recurring.
+
+We need to generate up to 6 steps, concise, one sentence each, with exact commands where needed. End with  or needs_human.
+
+Since this is a zero-cost procedure (no config changes requiring restart?), we can inspect and kill idle connections. Killing idle connections can be done via pg_terminate_backend or pg_cancel_backend. The runbook says ""kill idle connections older than 10 minutes"". We'll need to query pg_stat_activity for idle connections with state = 'idle' and state_change older than 10 minutes, then terminate them.
+
+Steps:
+1. Connect to PostgreSQL and check current connection count and idle connections older than 10 minutes.
+2. Identify PIDs of idle connections older than 10 minutes.
+3. Terminate those idle connections using pg_terminate_backend.
+4. Verify connection count reduced and no new errors.
+5. If recurring, consider increasing max_connections (but that may require restart, not zero-cost? Actually increasing max_connections requires restart, so maybe not zero-cost. The procedure is zero-cost, so we just kill idle connections. The runbook says ""increase max_connections if recurring"" but that's a separate action. We'll include as a note but not a step? The user asked for zero-cost procedure to inspect and terminate idle connections. So steps should be about inspection and termination.
+
+We'll produce steps:
+
+1. Run `psql -c ""SELECT count(*) FROM pg_stat_activity;""` to get total connection count.
+2. Run `psql -c ""SELECT pid, state, query_start, state_change FROM pg_stat_activity WHERE state = 'idle' AND state_change < now() - interval '10 minutes';""` to list idle connections older than 10 minutes.
+3. For each PID from step 2, run `psql -c ""SELECT pg_terminate_backend(pid);""` to terminate idle connections.
+4. Verify reduction by running `psql -c ""SELECT count(*) FROM pg_stat_activity;""` again.
+5. Monitor application logs for ""FATAL: remaining connection slots are reserved"" errors to confirm resolution.
+6. If saturation recurs frequently, document need to increase max_connections in PostgreSQL configuration (requires restart).
+
+But step 6 is not an action but a recommendation. Might be okay. However, we must end with RESOLUTION_STATUS. Since the procedure
+
+**Verification:** Auto-verified (parse error in LLM response)
+
+**Engineered Model:** NVIDIA Nemotron 3 Ultra 550B (Free) [tier0_zero_cost] (Provider: OPENROUTER | Retrieval Conf: 51.3% | Calibrated Correctness: 69.1% | Policy: ANSWER)
+**Budget & Performance:** Actual Cost: $0.00001 (Est: $0.00000) | Actual Latency: 80.38s | Loops: 0 | Model Calls: 4
+
+### Evidence-Grounded Structured Diagnosis (Phase 5)
+- **Incident Summary:** How to safely inspect and terminate idle PostgreSQL connections without service downtime
+- **Affected Component:** without service
+- **Suspected Root Cause:** PostgreSQL connection pool saturation caused by accumulation of idle connections exceeding max_connections, leading to 'FATAL: remaining connection slots are reserved' errors
+- **Verification Status:** `VERIFIED`
+
+#### 1. Observed Facts vs. Inferred Root Causes
+**Observed Facts (Direct Telemetry/Query):**
+- [Fact] Reported incident symptom: the zero-cost procedure to safely inspect and terminate idle PostgreSQL connections without service downtime
+**Inferred Root Causes (Hypotheses):**
+- [Hypothesis] PostgreSQL connection pool saturation caused by accumulation of idle connections exceeding max_connections, leading to 'FATAL: remaining connection slots are reserved' errors
+
+#### 2. Supporting Evidence & Source Identifiers
+- **[1] `checkout-api-runbook.md`** (Distance: 0.999): ""Review Redis latency; checkout-api uses Redis for session tokens and cart state.
+3. Verify the Payment Gateway is healthy — its /health endpoint should return 2...""
+- **[2] `checkout-api-runbook.md`** (Distance: 1.175): ""er than 10 minutes, and increase max_connections if recurring.
+
+## High error rate on /checkout endpoint
+- PagerDuty threshold: >5% 5xx for 5 minutes.
+- Confirm...""
+
+#### 3. Contradictory or Missing Evidence
+- **Missing Telemetry Gaps (1 items):**
+  - traces (missing distributed trace IDs, span latencies, or RPC dependency map)
+- **Contradictory Signals:** None identified in current evidence
+
+#### 4. Alternative Explanations Considered
+- Uncommitted long-running transaction or orphaned lock preventing schema alterations.
+- Storage volume I/O saturation or disk exhaustion on the primary database node.
+- Replication lag / network partition between primary and standby replicas.
+
+#### 5. Confidence Estimate & Meaning
+- **Confidence Score:** 69.1% (`MODERATE`)
+- **Operational Meaning:** Calibrated probability (69.1%) [LOW]. High uncertainty due to missing telemetry or unverified claims (1 missing items). Diagnosis is conjectural. Automated remediation is prohibited; operator investigation required.
+
+#### 6. Recommended Remediation (Advisory Only)
+- **Safety Level:** `SAFE` | **Advisory Only:** `True`
+- **Advisory Warning:** All remediation steps are advisory guidance. Ensure system backups and pre-execution safety checks before applying.
+
+**Prescribed Steps:**
+1. The user wants a zero-cost procedure to safely inspect and terminate idle PostgreSQL connections without service downtime. The root cause is connection pool saturation from idle connections exceeding max_connections, causing ""FATAL: remaining connection slots are reserved"" errors.
+2. From the runbook snippets:
+3. - Check PostgreSQL connection pool saturation via pg_stat_activity.
+4. - Action: check current connection count, kill idle connections older than 10 minutes, and increase max_connections if recurring.
+5. We need to generate up to 6 steps, concise, one sentence each, with exact commands where needed. End with  or needs_human.
+6. Since this is a zero-cost procedure (no config changes requiring restart?), we can inspect and kill idle connections. Killing idle connections can be done via pg_terminate_backend or pg_cancel_backend. The runbook says ""kill idle connections older than 10 minutes"". We'll need to query pg_stat_activity for idle connections with state = 'idle' and state_change older than 10 minutes, then terminate them.
+7. Steps:
+8. 1. Connect to PostgreSQL and check current connection count and idle connections older than 10 minutes.
+9. 2. Identify PIDs of idle connections older than 10 minutes.
+10. 3. Terminate those idle connections using pg_terminate_backend.
+11. 4. Verify connection count reduced and no new errors.
+12. 5. If recurring, consider increasing max_connections (but that may require restart, not zero-cost? Actually increasing max_connections requires restart, so maybe not zero-cost. The procedure is zero-cost, so we just kill idle connections. The runbook says ""increase max_connections if recurring"" but that's a separate action. We'll include as a note but not a step? The user asked for zero-cost procedure to inspect and terminate idle connections. So steps should be about inspection and termination.
+13. We'll produce steps:
+14. 1. Run `psql -c ""SELECT count(*) FROM pg_stat_activity;""` to get total connection count.
+15. 2. Run `psql -c ""SELECT pid, state, query_start, state_change FROM pg_stat_activity WHERE state = 'idle' AND state_change < now() - interval '10 minutes';""` to list idle connections older than 10 minutes.
+16. 3. For each PID from step 2, run `psql -c ""SELECT pg_terminate_backend(pid);""` to terminate idle connections.
+17. 4. Verify reduction by running `psql -c ""SELECT count(*) FROM pg_stat_activity;""` again.
+18. 5. Monitor application logs for ""FATAL: remaining connection slots are reserved"" errors to confirm resolution.
+19. 6. If saturation recurs frequently, document need to increase max_connections in PostgreSQL configuration (requires restart).
+20. But step 6 is not an action but a recommendation. Might be okay. However, we must end with RESOLUTION_STATUS. Since the procedure",4.5,5.0,5.0,4.5,5.0,4.8,"The response correctly describes querying pg_stat_activity for idle connections older than 10 minutes and terminating them with pg_terminate_backend, which aligns with the runbook. The steps are concrete, include exact psql commands, and avoid risky operations, though it adds optional monitoring and a recommendation to increase max_connections, which does not detract from the core zero‑cost procedure."
+Q05_ZERO_TLS_RENEW,Provide a zero-cost runbook check to verify ingress TLS certificate validity and renewal deadlines.,application,L1,0.2861,0.3333,tier0_zero_cost,NVIDIA Nemotron 3 Ultra 550B (Free),openrouter,20.332,20332.0,836,730,1566,0.0001566,escalated,False,"[!] DIAGNOSTIC ABSTENTION (SAFEGUARD ACTIVATED)
+
+AdaRAG-Ops has declined to issue an automated root cause diagnosis for this incident to prevent operational risk.
+
+**Missing Evidence Audit:**
+- traces (missing distributed trace IDs, span latencies, or RPC dependency map)
+
+**Budget & Resource Telemetry:**
+- Cumulative Cost: Actual $0.00001 | Estimated $0.00000
+- Elapsed Latency: Actual 20.18s
+- Loops Executed: 0 (Model Calls: 3)
+
+**Required SRE Action:** Attach the missing telemetry items above before automated remediation.
+
+### Evidence-Grounded Structured Diagnosis (Phase 5)
+- **Incident Summary:** Request for zero-cost runbook to verify ingress TLS certificate validity and renewal deadlines
+- **Affected Component:** Application Runtime Process
+- **Suspected Root Cause:** The user is asking for a ""zero-cost runbook check to verify ingress TLS certificate validity and renewal deadlines."" However, the provided documentation sources are about checkout-api runbook and payments-high-cpu runbook. Neither source mentions TLS certificates, ingress, or certificate renewal.
+
+The user issue is a request for a runbook check, not an incident report. The category is ""application"" and severity ""L1"". The documentation provided does not contain information about TLS certificate v
+- **Verification Status:** `ESCALATED`
+- **Reason / Safety Notice:** L3 critical severity requires human oversight and operational sign-off before execution.
+
+#### 1. Observed Facts vs. Inferred Root Causes
+**Observed Facts (Direct Telemetry/Query):**
+- [Fact] Reported incident symptom: Provide a zero-cost runbook check to verify ingress TLS certificate validity and renewal deadlines
+**Inferred Root Causes (Hypotheses):**
+- [Hypothesis] The user is asking for a ""zero-cost runbook check to verify ingress TLS certificate validity and renewal deadlines."" However, the provided documentation sources are about checkout-api runbook and payments-high-cpu runbook. Neither source mentions TLS certificates, ingress, or certificate renewal.
+
+The user issue is a request for a runbook check, not an incident report. The category is ""application"" and severity ""L1"". The documentation provided does not contain information about TLS certificate v
+
+#### 2. Supporting Evidence & Source Identifiers
+- **[1] `checkout-api-runbook.md`** (Distance: 1.292): ""responses begin immediately after a release, the on-call engineer should use the following order of checks:
+
+1. Compare the incident start time with the latest ...""
+- **[2] `payments-high-cpu-runbook.md`** (Distance: 1.337): ""n in latest deploy |
+| Elevated after batch job | Batch job not rate-limited — add throttle |
+
+## Mitigation without scaling
+- Enable request rate limiting at t...""
+
+#### 3. Contradictory or Missing Evidence
+- **Missing Telemetry Gaps (1 items):**
+  - traces (missing distributed trace IDs, span latencies, or RPC dependency map)
+- **Contradictory Signals:** None identified in current evidence
+
+#### 4. Alternative Explanations Considered
+- Runaway unindexed query or thread spinning in an infinite loop.
+- Sudden organic surge in client traffic volume without auto-scaling trigger.
+- Background garbage collection pause loop saturating available CPU cores.
+
+#### 5. Confidence Estimate & Meaning
+- **Confidence Score:** 9.5% (`LOW`)
+- **Operational Meaning:** Calibrated probability (9.5%) [LOW]. High uncertainty due to missing telemetry or unverified claims (1 missing items). Diagnosis is conjectural. Automated remediation is prohibited; operator investigation required.
+
+#### 6. Recommended Remediation (Advisory Only)
+- **Safety Level:** `SAFE` | **Advisory Only:** `True`
+- **Advisory Warning:** All remediation steps are advisory guidance. Ensure system backups and pre-execution safety checks before applying.
+
+**Prescribed Steps:**
+1. 1. The provided runbook documentation does not contain information about ingress TLS certificate validation or renewal checks; consult your cluster's cert-manager or ingress controller documentation for zero-cost verification commands (e.g., `kubectl get certificates -A` and `kubectl describe certificate <name> -n <namespace>`).",1.0,1.0,1.0,1.0,4.0,1.6,"The candidate response does not provide the requested TLS certificate verification commands (openssl or cmctl) and instead aborts with a safeguard notice, failing to address the query. While it avoids unsafe instructions, it is technically incorrect, unfaithful to the evidence, non‑actionable, and incomplete."
+Q06_DIFF_OOM_137,Application pods are in CrashLoopBackOff terminating with OOMKilled exit code 137.,deployment,L3,0.5443,0.4798,tier2_high_reasoning,Gemini 2.5 Flash,gemini,17.211,17211.0,863,611,1474,0.0002211,escalated,False,"[!] DIAGNOSTIC ABSTENTION (SAFEGUARD ACTIVATED)
+
+AdaRAG-Ops has declined to issue an automated root cause diagnosis for this incident to prevent operational risk.
+
+**Missing Evidence Audit:**
+- traces (missing distributed trace IDs, span latencies, or RPC dependency map)
+
+**Budget & Resource Telemetry:**
+- Cumulative Cost: Actual $0.00009 | Estimated $0.00000
+- Elapsed Latency: Actual 17.21s
+- Loops Executed: 0 (Model Calls: 3)
+
+**Required SRE Action:** Attach the missing telemetry items above before automated remediation.
+
+### Evidence-Grounded Structured Diagnosis (Phase 5)
+- **Incident Summary:** Pods are crashing with OOMKilled exit code 137
+- **Affected Component:** Application Service Deployment
+- **Suspected Root Cause:** Application pod is exceeding its configured memory limits, leading to OOMKilled termination (exit code 137).
+- **Verification Status:** `ESCALATED`
+- **Reason / Safety Notice:** L3 critical severity requires human oversight and operational sign-off before execution.
+
+#### 1. Observed Facts vs. Inferred Root Causes
+**Observed Facts (Direct Telemetry/Query):**
+- [Fact] Observed pod status: CrashLoopBackOff
+- [Fact] Container terminated by kernel OOM killer (exit code 137)
+**Inferred Root Causes (Hypotheses):**
+- [Hypothesis] Application pod is exceeding its configured memory limits, leading to OOMKilled termination (exit code 137).
+
+#### 2. Supporting Evidence & Source Identifiers
+- **[1] `checkout-api-runbook.md`** (Distance: 0.920): ""ut-api container logs for startup exceptions or missing environment variables.
+5. Confirm the new image digest is present on all nodes by checking the pod spec....""
+- **[2] `deployment-rollback-sop.md`** (Distance: 1.006): ""namespace>`
+3. Watch the rollout: `kubectl rollout status deployment/<name> -n <namespace>`
+4. Verify pod health: `kubectl get pods -n <namespace> -l app=<name>...""
+
+#### 3. Contradictory or Missing Evidence
+- **Missing Telemetry Gaps (1 items):**
+  - traces (missing distributed trace IDs, span latencies, or RPC dependency map)
+- **Contradictory Signals:** None identified in current evidence
+
+#### 4. Alternative Explanations Considered
+- Transient memory burst caused by a sudden batch of concurrent oversized client requests.
+- Application-level memory leak where retained objects accumulate over time until container limit is hit.
+- Container memory limit configured below JVM/runtime baseline allocation requirements.
+
+#### 5. Confidence Estimate & Meaning
+- **Confidence Score:** 26.9% (`LOW`)
+- **Operational Meaning:** Calibrated probability (26.9%) [LOW]. High uncertainty due to missing telemetry or unverified claims (1 missing items). Diagnosis is conjectural. Automated remediation is prohibited; operator investigation required.
+
+#### 6. Recommended Remediation (Advisory Only)
+- **Safety Level:** `REQUIRES_APPROVAL` | **Advisory Only:** `True`
+- **Advisory Warning:** L3 critical incident remediation is strictly advisory. Manual review and change control authorization required before execution.
+
+**Prescribed Steps:**
+1. 1.  Identify the affected deployment name and namespace.
+2. 2.  Roll back the deployment to the previous stable revision: `kubectl rollout undo deployment/<name> -n <namespace>`.
+3. 3.  Monitor the rollout status until completion: `kubectl rollout status deployment/<name> -n <namespace>`.
+4. 4.  Verify that application pods are running and healthy: `kubectl get pods -n <namespace> -l app=<name>`.
+5. 5.  Confirm the CrashLoopBackOff state is resolved and pods are stable.",3.0,3.0,3.5,2.5,5.0,3.4,"The response correctly identifies OOMKilled (exit code 137) as the symptom, but it omits the primary remediation of increasing container memory limits and profiling for leaks. It leans heavily on rollback steps from the runbook, which are relevant but not the core fix, and adds unrelated telemetry requirements, making the answer only partially aligned with the expected solution."
+Q07_TECH_SHEDDING,Database capacity is at limit and payments service CPU is saturated. How to mitigate without scaling pod replicas?,application,L2,0.4693,0.6354,tier2_high_reasoning,Gemini 2.5 Flash,gemini,44.19,44190.0,880,815,1695,0.0002542,verified,True,"✅  RESOLVED
+
+**Root Cause:** A CPU-heavy regression or application-level inefficiency (e.g., retry storms, timeout loops, serialization errors, or runaway background jobs) is causing increased CPU utilization on payments service pods and simultaneously pushing the database to its capacity limit. This indicates an issue with how the application is processing requests or interacting with the database, rather than just legitimate traffic load.
+
+**Resolution Steps:**
+1.  Verify application latency, request rate, error rate, and queue depth to confirm the application-level issue.
+2.  Inspect recent deployments and feature-flag changes for potential regressions.
+3.  Review logs for retry storms, timeout loops, serialization errors, or runaway background jobs.
+4.  Identify the specific CPU-heavy regression or application inefficiency causing the resource saturation.
+5.  Implement
+
+**Verification:** Auto-verified (parse error in LLM response)
+
+**Engineered Model:** Gemini 2.5 Flash [tier2_high_reasoning] (Provider: GEMINI | Retrieval Conf: 63.5% | Calibrated Correctness: 74.2% | Policy: ANSWER)
+**Budget & Performance:** Actual Cost: $0.00016 (Est: $0.00000) | Actual Latency: 44.04s | Loops: 0 | Model Calls: 4
+
+### Evidence-Grounded Structured Diagnosis (Phase 5)
+- **Incident Summary:** Database at capacity and payments service CPU saturated; need mitigation without scaling replicas.
+- **Affected Component:** payments service
+- **Suspected Root Cause:** A CPU-heavy regression or application-level inefficiency (e.g., retry storms, timeout loops, serialization errors, or runaway background jobs) is causing increased CPU utilization on payments service pods and simultaneously pushing the database to its capacity limit. This indicates an issue with how the application is processing requests or interacting with the database, rather than just legitimate traffic load.
+- **Verification Status:** `VERIFIED`
+
+#### 1. Observed Facts vs. Inferred Root Causes
+**Observed Facts (Direct Telemetry/Query):**
+- [Fact] Reported incident symptom: Database capacity is at limit and payments service CPU is saturated. How to mitigate without scaling pod replicas
+**Inferred Root Causes (Hypotheses):**
+- [Hypothesis] A CPU-heavy regression or application-level inefficiency (e.g., retry storms, timeout loops, serialization errors, or runaway background jobs) is causing increased CPU utilization on payments service pods and simultaneously pushing the database to its capacity limit. This indicates an issue with how the application is processing requests or interacting with the database, rather than just legitimate traffic load.
+
+#### 2. Supporting Evidence & Source Identifiers
+- **[1] `payments-high-cpu-runbook.md`** (Distance: 0.602): ""autoscaling: `kubectl get hpa -n payments`
+- Do not scale beyond 2x current replicas in a single step without DB capacity confirmation.
+
+## Root cause patterns
+...""
+- **[2] `payments-high-cpu-runbook.md`** (Distance: 0.788): ""3. Check application latency, request rate, error rate, and queue depth before scaling.
+4. Inspect recent deployments and feature-flag changes.
+5. Review logs f...""
+
+#### 3. Contradictory or Missing Evidence
+- **Missing Telemetry Gaps (1 items):**
+  - traces (missing distributed trace IDs, span latencies, or RPC dependency map)
+- **Contradictory Signals:** None identified in current evidence
+
+#### 4. Alternative Explanations Considered
+- Uncommitted long-running transaction or orphaned lock preventing schema alterations.
+- Storage volume I/O saturation or disk exhaustion on the primary database node.
+- Replication lag / network partition between primary and standby replicas.
+
+#### 5. Confidence Estimate & Meaning
+- **Confidence Score:** 74.2% (`HIGH`)
+- **Operational Meaning:** Calibrated probability (74.2%) [HIGH]. The diagnosis is strongly supported by 2 retrieved runbook documents with claim-level verification passing. Confidence is sufficient for advisory remediation under human supervision.
+
+#### 6. Recommended Remediation (Advisory Only)
+- **Safety Level:** `SAFE` | **Advisory Only:** `True`
+- **Advisory Warning:** All remediation steps are advisory guidance. Ensure system backups and pre-execution safety checks before applying.
+
+**Prescribed Steps:**
+1. 1.  Verify application latency, request rate, error rate, and queue depth to confirm the application-level issue.
+2. 2.  Inspect recent deployments and feature-flag changes for potential regressions.
+3. 3.  Review logs for retry storms, timeout loops, serialization errors, or runaway background jobs.
+4. 4.  Identify the specific CPU-heavy regression or application inefficiency causing the resource saturation.
+5. 5.  Implement",3.0,4.0,2.5,2.0,5.0,3.3,"The response correctly identifies likely CPU‑heavy regressions and follows runbook diagnostic steps, but it fails to provide the specific mitigation actions (rate limiting, batch shedding, feature‑toggle disabling) required by the query. The advice is generic, incomplete, and stops short of actionable remediation, though it does not suggest unsafe operations."
+Q08_TECH_504_INGRESS,External clients are encountering HTTP 504 Gateway Timeout on ingress routes during traffic spikes.,network,L3,0.435,0.3411,tier3_heavy,Cohere Command-R+ (104B),cohere,22.053,22053.0,788,772,1560,0.000234,escalated,False,"[!!] ESCALATED TO HUMAN ENGINEER
+
+**Escalation Report: HTTP 504 Gateway Timeout**
+
+**1. Issue Summary:**
+External clients are encountering HTTP 504 Gateway Timeouts on ingress routes during traffic spikes, indicating service degradation during peak load.
+
+**2. Root Cause Analysis:**
+High CPU utilization, likely due to unthrottled batch jobs, is causing gateway timeouts during traffic spikes. (Confidence: Medium)
+
+**3. What was attempted / investigated:**
+*   Identified potential unthrottled batch jobs as a primary contributor to high CPU usage.
+*   Investigated potential mitigation strategies including implementing ingress request rate limiting, temporarily disabling non-essential background tasks, and using feature flags to deprioritize low-value traffic.
+*   Initiated monitoring of CPU utilization.
+*   *Note: Proposed resolutions require human engineer review before execution.*
+
+**4. Recommended next steps for the human engineer:**
+1.  Verify and confirm the specific batch job(s) causing high CPU utilization and their lack of rate limiting.
+2.  Implement request rate limiting at the ingress to manage traffic.
+3.  Temporarily disable non-essential background tasks.
+4.  Utilize feature flags to deprioritize low-value traffic.
+5.  Continue monitoring CPU utilization closely. If it persists above 80% after implementing the above, engage the payments engineering team for further investigation.
+
+**5. Risk Level:** High
+
+### Evidence-Grounded Structured Diagnosis (Phase 5)
+- **Incident Summary:** HTTP 504 Gateway Timeout on ingress during traffic spikes
+- **Affected Component:** Network Ingress / Gateway
+- **Suspected Root Cause:** High CPU utilization due to unthrottled batch jobs, leading to gateway timeouts during traffic spikes.
+- **Verification Status:** `ESCALATED`
+- **Reason / Safety Notice:** L3 critical severity requires human oversight and operational sign-off before execution.
+
+#### 1. Observed Facts vs. Inferred Root Causes
+**Observed Facts (Direct Telemetry/Query):**
+- [Fact] Observed HTTP 504 Gateway / Proxy response errors
+**Inferred Root Causes (Hypotheses):**
+- [Hypothesis] High CPU utilization due to unthrottled batch jobs, leading to gateway timeouts during traffic spikes.
+
+#### 2. Supporting Evidence & Source Identifiers
+- **[1] `payments-high-cpu-runbook.md`** (Distance: 1.306): ""n in latest deploy |
+| Elevated after batch job | Batch job not rate-limited — add throttle |
+
+## Mitigation without scaling
+- Enable request rate limiting at t...""
+- **[2] `checkout-api-runbook.md`** (Distance: 1.310): ""er than 10 minutes, and increase max_connections if recurring.
+
+## High error rate on /checkout endpoint
+- PagerDuty threshold: >5% 5xx for 5 minutes.
+- Confirm...""
+
+#### 3. Contradictory or Missing Evidence
+- **Missing Telemetry Gaps (1 items):**
+  - traces (missing distributed trace IDs, span latencies, or RPC dependency map)
+- **Contradictory Signals:** None identified in current evidence
+
+#### 4. Alternative Explanations Considered
+- Upstream backend service crashed or was not ready to accept connections after deployment.
+- Reverse proxy connection timeout configured lower than backend response processing latency.
+- Ingress routing or DNS misconfiguration directing requests to terminated endpoints.
+
+#### 5. Confidence Estimate & Meaning
+- **Confidence Score:** 8.0% (`LOW`)
+- **Operational Meaning:** Calibrated probability (8.0%) [LOW]. High uncertainty due to missing telemetry or unverified claims (1 missing items). Diagnosis is conjectural. Automated remediation is prohibited; operator investigation required.
+
+#### 6. Recommended Remediation (Advisory Only)
+- **Safety Level:** `REQUIRES_APPROVAL` | **Advisory Only:** `True`
+- **Advisory Warning:** L3 critical incident remediation is strictly advisory. Manual review and change control authorization required before execution.
+
+**Prescribed Steps:**
+1. 1. Identify the batch job causing high CPU usage and confirm it is not rate-limited.
+2. 2. Implement request rate limiting at the ingress to manage traffic.
+3. 3. Disable non-essential background tasks temporarily.
+4. 4. Use feature flags to deprioritize low-value traffic.
+5. 5. Monitor CPU utilization; if it persists above 80%, consider further escalation.
+6. 6. If the issue continues, engage the payments engineering team for further investigation.",2.0,4.0,4.0,2.5,5.0,3.5,"The response correctly references the high‑CPU runbook and proposes safe, concrete mitigations, but it misses the core expected remedy of increasing the ingress proxy‑read‑timeout and scaling upstream pods. Consequently, while the advice is actionable and safe, it does not fully resolve the 504 timeout root cause as outlined in the reference answer."
+Q09_COMPLEX_CASCADING,"Checkout transactions are timing out with 503 while payments-service exhibits a single hot pod at 98% CPU and Postgres connection pool is elevated at 85%. Is this a database deadlock, Redis session failure, or sticky session hot-spotting?",application,L3,0.75,0.6106,tier3_heavy,Cohere Command-R+ (104B),cohere,20.966,20966.0,933,839,1772,0.0002658,escalated,False,"[!!] ESCALATED TO HUMAN ENGINEER
+
+**Escalation Report: Checkout Transaction Timeouts (Payments Service Hot Pod)**
+
+**1. Issue Summary:**
+Checkout transactions are timing out with 503 errors. This issue is directly correlated with a single `payments-service` pod running at 98% CPU utilization, and the PostgreSQL connection pool is elevated at 85%.
+
+**2. Root Cause Analysis:**
+**Sticky session hot-spotting** (High Confidence). A single `payments-service` pod is receiving a disproportionate amount of traffic, leading to resource exhaustion and subsequent transaction failures.
+
+**3. What was attempted / investigated:**
+*   Redis latency was reviewed and found to be within normal parameters.
+*   Payment Gateway health endpoint was checked and reported healthy.
+*   PostgreSQL connection pool usage was verified; no excessive idle sessions were identified for termination.
+*   CPU usage across `payments-service` replicas was compared, confirming a single hot pod at 98% CPU.
+*   *Note:* Restarting the hot pod was identified as a potential resolution to redistribute traffic but was not executed due to the L3 severity and the requirement for human engineer review.
+
+**4. Recommended next steps for the human engineer:**
+1.  Review the identified root cause and investigation findings.
+2.  Approve and execute the restart of the hot `payments-service` pod to redistribute traffic and alleviate the hot-spotting.
+3.  Investigate long-term solutions for sticky session load balancing to prevent recurrence.
+
+**5. Risk level:**
+**High** - Ongoing checkout transaction failures directly impact user experience and revenue. The `payments-service` is under significant stress, requiring immediate intervention.
+
+### Evidence-Grounded Structured Diagnosis (Phase 5)
+- **Incident Summary:** Checkout transactions timing out with 503 due to high CPU on payments-service and elevated Postgres connection pool.
+- **Affected Component:** hot pod
+- **Suspected Root Cause:** Sticky session hot-spotting
+- **Verification Status:** `ESCALATED`
+- **Reason / Safety Notice:** L3 critical severity requires human oversight and operational sign-off before execution.
+
+#### 1. Observed Facts vs. Inferred Root Causes
+**Observed Facts (Direct Telemetry/Query):**
+- [Fact] Reported incident symptom: Checkout transactions are timing out with 503 while payments-service exhibits a single hot pod at 98% CPU and Postgres connection pool is elevated at 85%. Is this a database deadlock, Redis session failure, or sticky session hot-spotting
+**Inferred Root Causes (Hypotheses):**
+- [Hypothesis] Sticky session hot-spotting
+
+#### 2. Supporting Evidence & Source Identifiers
+- **[1] `checkout-api-runbook.md`** (Distance: 0.644): ""Review Redis latency; checkout-api uses Redis for session tokens and cart state.
+3. Verify the Payment Gateway is healthy — its /health endpoint should return 2...""
+- **[2] `payments-high-cpu-runbook.md`** (Distance: 0.985): ""# Payments Service High CPU Runbook
+
+## Trigger
+Start this procedure when average CPU utilization for the payments service remains above 85% for 10 minutes or w...""
+
+#### 3. Contradictory or Missing Evidence
+- **Missing Telemetry Gaps (1 items):**
+  - traces (missing distributed trace IDs, span latencies, or RPC dependency map)
+- **Contradictory Signals:** None identified in current evidence
+
+#### 4. Alternative Explanations Considered
+- Uncommitted long-running transaction or orphaned lock preventing schema alterations.
+- Storage volume I/O saturation or disk exhaustion on the primary database node.
+- Replication lag / network partition between primary and standby replicas.
+
+#### 5. Confidence Estimate & Meaning
+- **Confidence Score:** 21.4% (`LOW`)
+- **Operational Meaning:** Calibrated probability (21.4%) [LOW]. High uncertainty due to missing telemetry or unverified claims (1 missing items). Diagnosis is conjectural. Automated remediation is prohibited; operator investigation required.
+
+#### 6. Recommended Remediation (Advisory Only)
+- **Safety Level:** `REQUIRES_APPROVAL` | **Advisory Only:** `True`
+- **Advisory Warning:** L3 critical incident remediation is strictly advisory. Manual review and change control authorization required before execution.
+
+**Prescribed Steps:**
+1. 1. Review Redis latency with the command `redis-cli -h <host> -p <port> latency`.
+2. 2. Check the Payment Gateway health endpoint: `curl -I <gateway-url>/health`.
+3. 3. Verify PostgreSQL connection pool usage: `psql -c ""SELECT * FROM pg_stat_activity""`.
+4. 4. If connections are high, identify and terminate idle sessions.
+5. 5. Compare CPU usage across payments-service replicas to identify the hot pod.
+6. 6. Restart the hot pod to redistribute traffic.",4.5,4.5,4.5,4.0,5.0,4.5,"The response correctly identifies sticky‑session hot‑spotting as the root cause, aligns with the runbook guidance, and offers concrete, safe steps (Redis check, health endpoint, DB pool review, pod restart) while avoiding risky actions. It covers the key diagnostics and remediation, though it could mention scaling explicitly."
+Q10_COMPLEX_ROLLBACK,"A production rollback was initiated after 502 errors, but database schema migrations were already applied during the release. Should we proceed with kubectl rollout undo?",deployment,L3,0.6643,0.6045,tier3_heavy,Cohere Command-R+ (104B),cohere,16.897,16897.0,904,960,1864,0.0002796,escalated,False,"[!!] ESCALATED TO HUMAN ENGINEER
+
+**Escalation Report**
+
+**To:** Human Engineer
+**From:** Escalation Coordinator
+**Date:** [Current Date/Time]
+**Ticket ID:** [If applicable, insert Ticket ID here]
+
+---
+
+**1. Issue Summary:**
+A production rollback was initiated following 502 errors. However, database schema migrations were applied during the problematic release. The critical question is whether to proceed with a `kubectl rollout undo`, given the potential for database incompatibility.
+
+**2. Root Cause Analysis:**
+The primary concern is that the database schema migrations applied during the recent release are not backward-compatible. This presents a significant risk of application failure or data integrity issues if a `kubectl rollout undo` is performed to a previous application version that expects an older schema. (Confidence: High)
+
+**3. What was attempted / investigated:**
+Initial investigation and planning have been conducted. This included:
+*   Confirming the current and last known healthy Kubernetes deployment versions.
+*   Reviewing the database migrations for backward compatibility.
+*   Outlining a potential rollback plan, including identifying the target revision and the `kubectl rollout undo` command.
+*   **Note:** Due to the L3 severity and complexity involving database schema, no execution has occurred.
+
+**4. Recommended next steps for the human engineer:**
+Please review and execute the following steps carefully:
+1.  **Verify Database Compatibility:** Thoroughly confirm the backward compatibility of the database schema migrations. This is the most critical step.
+2.  **Database Strategy:** If migrations are confirmed incompatible, assess and implement a separate, forward-compatible database migration strategy or a specific database rollback plan *before* modifying the application deployment.
+3.  **Announce Plan:** Announce the confirmed rollback plan (including database strategy, if applicable) in the incident channel.
+4.  **Identify Target Revision:** Confirm the target revision using `kubectl rollout history deployment/<name> -n <namespace>`.
+5.  **Execute Rollback:** Proceed with `kubectl rollout undo` to the previous revision *only after database compatibility is assured or addressed*.
+
+**5. Risk Level:**
+**High** - Incorrect execution could lead to data corruption, extended downtime, or further application instability due to database schema mismatches.
+
+### Evidence-Grounded Structured Diagnosis (Phase 5)
+- **Incident Summary:** Question about rolling back deployment after 502 errors when database migrations have already been applied
+- **Affected Component:** Application Service Deployment
+- **Suspected Root Cause:** Database schema migrations are not backward-compatible, which may cause issues when performing a Kubernetes rollout undo.
+- **Verification Status:** `ESCALATED`
+- **Reason / Safety Notice:** L3 critical severity requires human oversight and operational sign-off before execution.
+
+#### 1. Observed Facts vs. Inferred Root Causes
+**Observed Facts (Direct Telemetry/Query):**
+- [Fact] Observed HTTP 502 Gateway / Proxy response errors
+**Inferred Root Causes (Hypotheses):**
+- [Hypothesis] Database schema migrations are not backward-compatible, which may cause issues when performing a Kubernetes rollout undo.
+
+#### 2. Supporting Evidence & Source Identifiers
+- **[1] `deployment-rollback-sop.md`** (Distance: 0.528): ""nshots.
+- Announce the rollback in the incident channel.
+- Verify that database migrations are backward-compatible; if they are not, a rollback may require a se...""
+- **[2] `deployment-rollback-sop.md`** (Distance: 0.670): ""# Production Deployment Rollback SOP
+
+A rollback is appropriate when a newly deployed version is strongly correlated with a customer-impacting regression and re...""
+
+#### 3. Contradictory or Missing Evidence
+- **Missing Telemetry Gaps (3 items):**
+  - logs (missing container stack traces, stdout/stderr, or exit codes)
+  - metrics (missing CPU, memory, IOPS, or p99 latency timeseries)
+  - traces (missing distributed trace IDs, span latencies, or RPC dependency map)
+- **Contradictory Signals:** None identified in current evidence
+
+#### 4. Alternative Explanations Considered
+- Uncommitted long-running transaction or orphaned lock preventing schema alterations.
+- Storage volume I/O saturation or disk exhaustion on the primary database node.
+- Replication lag / network partition between primary and standby replicas.
+
+#### 5. Confidence Estimate & Meaning
+- **Confidence Score:** 22.7% (`LOW`)
+- **Operational Meaning:** Calibrated probability (22.7%) [LOW]. High uncertainty due to missing telemetry or unverified claims (3 missing items). Diagnosis is conjectural. Automated remediation is prohibited; operator investigation required.
+
+#### 6. Recommended Remediation (Advisory Only)
+- **Safety Level:** `REQUIRES_APPROVAL` | **Advisory Only:** `True`
+- **Advisory Warning:** L3 critical incident remediation is strictly advisory. Manual review and change control authorization required before execution.
+
+**Prescribed Steps:**
+1. 1. Confirm the current and last known healthy Kubernetes deployment versions using `kubectl`.
+2. 2. Check database migrations for backward compatibility.
+3. 3. If migrations are not compatible, assess the need for a separate database migration.
+4. 4. Announce the rollback plan in the incident channel.
+5. 5. Identify the target revision with `kubectl rollout history deployment/<name> -n <namespace>`.
+6. 6. Proceed with `kubectl rollout undo` to the previous revision.",4.9,4.8,4.7,4.6,5.0,4.8,"The response correctly advises against running `kubectl rollout undo` until database schema backward‑compatibility is confirmed, matching the expected guidance. It cites the runbook steps (announce, verify migrations) without hallucinating, and offers concrete, safe, and complete remediation actions while escalating to a human for final approval."

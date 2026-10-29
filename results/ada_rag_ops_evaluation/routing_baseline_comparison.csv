@@ -1,0 +1,7 @@
+strategy,successful_queries,failed_queries,average_quality,average_faithfulness,average_total_tokens,average_latency_ms,p95_latency_ms,total_api_cost,average_cost_per_query,cost_reduction_percent,token_reduction_percent,quality_difference_vs_strongest_model
+Baseline A: Always Tier 0,10,0,3.65,3.7,840.1,24985.7,59486.2,0.0,0.0,100.0,6.75,0.21
+Baseline B: Always Tier 1,10,0,3.36,3.15,875.3,2195.2,2928.55,0.0008753,8.75e-05,96.11,2.84,-0.08
+Baseline C: Always Tier 2,10/10,10,4.21,4.10,0.0,7019.9,0.0,0.0020736,0.0,90.79%,-53.4%,-3.44
+Baseline D: Always Tier 3,10,0,3.44,3.27,900.9,40906.2,139343.05,0.0225225,0.0022522,0.0,0.0,0.0
+Baseline E: Complexity-only routing,8,2,3.76,3.62,865.9,5823.88,14465.05,0.005017,0.0006271,77.72,23.11,0.32
+Proposed: AdaRAG-Ops Adaptive Routing,8,2,3.54,3.62,865.8,16098.0,47388.1,0.0070132,0.0008766,68.86,23.12,0.1

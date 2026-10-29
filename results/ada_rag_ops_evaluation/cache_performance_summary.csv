@@ -1,0 +1,2 @@
+cache_configuration,total_lookups,exact_hits,semantic_hits,cache_misses,cache_hit_rate,cache_miss_rate,average_lookup_latency_ms,average_hit_latency_ms,average_miss_latency_ms,p95_hit_latency_ms,p95_miss_latency_ms,llm_calls_avoided,input_tokens_avoided,output_tokens_avoided,total_tokens_avoided,api_cost_avoided,cache_correctness_rate,false_hit_rate
+Full AdaRAG-Ops (Exact + Semantic SQLite Cache),20,5,4,11,45.0%,55.0%,43.205,53.687,4234.628,95.365,4241.56,9,4050,3420,7470,$0.001935,77.8%,0.0%

@@ -84,12 +84,14 @@ def estimate_token_cost(input_tokens: int, output_tokens: int, model: str = None
     return round((total_tokens / 1000.0) * cost_per_1k, 7)
 
 
-def get_llm(temperature=0.0, max_tokens=300, model: str = None, provider: str = None) -> BaseChatModel:
+def get_llm(temperature=0.0, max_tokens=300, model: str = None, provider: str = None,
+            request_options: Optional[dict] = None) -> BaseChatModel:
     """
     Returns an LLM instance dynamically based on arguments or environment variables.
     Supported providers: groq, openai, anthropic, gemini, openrouter, cerebras, huggingface, deepseek, cohere
     """
     global _MOCK_LLM_ADAPTER
+    client_options = request_options or {}
     if _MOCK_LLM_ADAPTER is not None:
         return _MOCK_LLM_ADAPTER
 
@@ -144,7 +146,7 @@ def get_llm(temperature=0.0, max_tokens=300, model: str = None, provider: str = 
         api_key = os.getenv("GROQ_API_KEY")
         if not api_key:
             raise ValueError("GROQ_API_KEY environment variable is missing.")
-        return ChatGroq(model=model_name, temperature=temperature, max_tokens=max(max_tokens, 500), api_key=api_key)
+        return ChatGroq(model=model_name, temperature=temperature, max_tokens=max(max_tokens, 500), api_key=api_key, **client_options)
         
     elif provider == "openai":
         from langchain_openai import ChatOpenAI
@@ -165,7 +167,7 @@ def get_llm(temperature=0.0, max_tokens=300, model: str = None, provider: str = 
         api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
         if not api_key:
             raise ValueError("GEMINI_API_KEY or GOOGLE_API_KEY environment variable is missing.")
-        return ChatGoogleGenerativeAI(model=model_name, temperature=temperature, max_output_tokens=max(max_tokens, 1500), google_api_key=api_key)
+        return ChatGoogleGenerativeAI(model=model_name, temperature=temperature, max_output_tokens=max(max_tokens, 1500), google_api_key=api_key, **client_options)
         
     elif provider == "openrouter":
         from langchain_openai import ChatOpenAI
@@ -178,7 +180,8 @@ def get_llm(temperature=0.0, max_tokens=300, model: str = None, provider: str = 
             model=model_name,
             temperature=temperature,
             max_tokens=max(max_tokens, 500),
-            default_headers={"HTTP-Referer": "https://github.com/adarag-ops", "X-Title": "AdaRAG-Ops"}
+            default_headers={"HTTP-Referer": "https://github.com/adarag-ops", "X-Title": "AdaRAG-Ops"},
+            **client_options
         )
         
     elif provider == "cerebras":

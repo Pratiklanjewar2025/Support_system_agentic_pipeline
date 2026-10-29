@@ -6,6 +6,7 @@ knowledge base context, and LLM reasoning.
 from agents.llm_utils import get_llm
 from langchain_core.messages import HumanMessage, SystemMessage
 import json, re
+import os
 
 from agents.state import AgentState
 

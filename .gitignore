@@ -7,3 +7,5 @@ __pycache__/
 *.db-shm
 *.db-wal
 
+results/ada_rag_ops_evaluation/LOCAL_TESTS_*/
+results/ada_rag_ops_evaluation/DRY_*/

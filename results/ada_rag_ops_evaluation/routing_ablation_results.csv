@@ -1,0 +1,6 @@
+configuration,features_enabled,successful_queries,failed_queries,average_quality,average_faithfulness,average_total_tokens,average_latency_ms,total_api_cost,cost_reduction_percent,routing_suitability_rate
+Ablation 1,Complexity only,8,2,3.76,3.62,865.9,5823.88,0.005017,77.72,60.0
+Ablation 2,Complexity + Severity,7,3,3.7,3.43,868.6,6360.14,0.0049323,78.1,50.0
+Ablation 3,Complexity + Retrieval Confidence,4,6,4.22,4.25,859.8,2332.25,0.0003439,98.47,30.0
+Ablation 4,Complexity + Severity + Retrieval Confidence,8,2,3.62,3.56,884.4,20876.38,0.0094339,58.11,50.0
+Ablation 5,Full Adaptive Routing Algorithm,8,2,3.54,3.62,865.8,16098.0,0.0070132,68.86,60.0

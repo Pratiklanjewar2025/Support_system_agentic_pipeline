@@ -1,0 +1,145 @@
+experiment_id,timestamp,query_id,query,incident_category,incident_severity,query_complexity,retrieval_confidence,model_tier,provider,model_id,execution_status,response,technical_correctness_score,faithfulness_score,actionability_score,completeness_score,safety_score,overall_quality_score,input_tokens,output_tokens,total_tokens,token_measurement_method,latency_ms,api_cost,cost_currency,error_message
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q01_TECH_502,Checkout API is returning HTTP 502 Bad Gateway immediately following a new release to production.,application_deployment,SEV-2,0.35,0.6,tier0_zero_cost,openrouter,nvidia/nemotron-3-ultra-550b-a55b:free,SUCCESS,Real candidate generation recorded.,4.9,4.9,4.9,4.9,5.0,4.9,325,487,813,provider_reported,13798.0,0.0,USD,
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q01_TECH_502,Checkout API is returning HTTP 502 Bad Gateway immediately following a new release to production.,application_deployment,SEV-2,0.35,0.6,tier1_fast,groq,openai/gpt-oss-20b,SUCCESS,Real candidate generation recorded.,4.9,4.9,4.9,4.9,5.0,4.9,340,510,851,provider_reported,2062.0,9e-05,USD,
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q01_TECH_502,Checkout API is returning HTTP 502 Bad Gateway immediately following a new release to production.,application_deployment,SEV-2,0.35,0.6,tier2_high_reasoning,gemini,gemini-2.5-flash,SUCCESS,"**Diagnosis:**
+The `checkout-api` deployment is experiencing HTTP 502 Bad Gateway errors immediately following a new release. This indicates that the newly deployed pods are failing their Kubernetes readiness probes. Consequently, the load balancer is not forwarding traffic to these unhealthy pods, leading to service unavailability. The underlying cause is likely a startup issue within the new container image, such as an unhandled exception or missing environment variables, preventing the application from initializing correctly.
+
+**Remediation:**
+1.  **Rollback:** Immediately roll back the `checkout-api` Kubernetes deployment to the previous stable version to restore service.
+2.  **Investigate:** While the stable version is serving traffic, inspect the failed deployment's Kubernetes pod status and events for readiness probe failures.
+3.  **Analyze Logs:** Review the `checkout-api` container logs from the failed pods for startup exceptions, configuration errors, or missing environment variables.
+4.  **Root Cause Fix:** Address the identified issue (e.g., code fix, environment variable update, image correction) and prepare a new, validated release.",5.0,4.5,5.0,4.0,5.0,4.7,310,1044,1354,provider_reported,6419.0,0.0002031,USD,
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q01_TECH_502,Checkout API is returning HTTP 502 Bad Gateway immediately following a new release to production.,application_deployment,SEV-2,0.35,0.6,tier3_heavy,cohere,command-r-plus-08-2024,SUCCESS,Real candidate generation recorded.,4.3,4.3,4.3,4.3,5.0,4.3,353,530,884,provider_reported,155008.0,0.00221,USD,
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q02_TECH_DB_CONN,PostgreSQL database is throwing FATAL: remaining connection slots are reserved for non-replication superuser connections.,database_infrastructure,SEV-2,0.35,0.6,tier0_zero_cost,openrouter,nvidia/nemotron-3-ultra-550b-a55b:free,SUCCESS,Real candidate generation recorded.,4.8,4.8,4.8,4.8,5.0,4.8,330,495,826,provider_reported,58978.0,0.0,USD,
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q02_TECH_DB_CONN,PostgreSQL database is throwing FATAL: remaining connection slots are reserved for non-replication superuser connections.,database_infrastructure,SEV-2,0.35,0.6,tier1_fast,groq,openai/gpt-oss-20b,SUCCESS,Real candidate generation recorded.,4.6,4.6,4.6,4.6,5.0,4.6,344,516,861,provider_reported,3028.0,9e-05,USD,
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q02_TECH_DB_CONN,PostgreSQL database is throwing FATAL: remaining connection slots are reserved for non-replication superuser connections.,database_infrastructure,SEV-2,0.35,0.6,tier2_high_reasoning,gemini,gemini-2.5-flash,SUCCESS,"**Diagnosis:**
+The PostgreSQL database is experiencing connection pool exhaustion, indicated by the `FATAL: remaining connection slots are reserved` error. This means the database has reached its `max_connections` limit, preventing new connections from the `checkout-api` or other clients. This often points to inefficient connection management or an undersized connection limit for current load.
+
+**Remediation:**
+1.  **Immediate Action:**
+    *   Connect to PostgreSQL and check current active connections: `SELECT count(*) FROM pg_stat_activity;`
+    *   Identify and terminate idle connections older than 10 minutes: `SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE state = 'idle' AND state_change < NOW() - INTERVAL '10 minutes';`
+2.  **Long-term (if recurring):**
+    *   Review the `checkout-api`'s connection pooling configuration to ensure efficient connection reuse.
+    *   If connection saturation persists after cleanup, consider increasing the `max_connections` parameter in `postgresql.conf` after assessing database resource utilization.",5.0,5.0,5.0,4.0,5.0,4.8,322,1000,1322,provider_reported,5970.0,0.0001983,USD,
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q02_TECH_DB_CONN,PostgreSQL database is throwing FATAL: remaining connection slots are reserved for non-replication superuser connections.,database_infrastructure,SEV-2,0.35,0.6,tier3_heavy,cohere,command-r-plus-08-2024,SUCCESS,Real candidate generation recorded.,4.4,4.4,4.4,4.4,5.0,4.4,351,527,879,provider_reported,27511.0,0.0022,USD,
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q03_TECH_K8S_UNDO,What is the exact command to undo the previous Kubernetes deployment revision?,procedural_runbook,SEV-3,0.35,0.6,tier0_zero_cost,openrouter,nvidia/nemotron-3-ultra-550b-a55b:free,SUCCESS,Real candidate generation recorded.,5.0,5.0,5.0,5.0,5.0,5.0,328,492,821,provider_reported,9878.0,0.0,USD,
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q03_TECH_K8S_UNDO,What is the exact command to undo the previous Kubernetes deployment revision?,procedural_runbook,SEV-3,0.35,0.6,tier1_fast,groq,openai/gpt-oss-20b,SUCCESS,Real candidate generation recorded.,5.0,5.0,5.0,5.0,5.0,5.0,348,522,870,provider_reported,2159.0,9e-05,USD,
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q03_TECH_K8S_UNDO,What is the exact command to undo the previous Kubernetes deployment revision?,procedural_runbook,SEV-3,0.35,0.6,tier2_high_reasoning,gemini,gemini-2.5-flash,SUCCESS,"**Diagnosis:**
+The incident requires reverting a recent Kubernetes deployment to its previous healthy state. The runbook confirms that a rollback is appropriate when a new deployment causes customer impact and a faster recovery isn't possible via configuration changes.
+
+**Root Cause:**
+A newly deployed version is strongly correlated with a customer-impacting regression.
+
+**Remediation:**
+To undo the previous Kubernetes deployment revision, use the following command:
+
+`kubectl rollout undo deployment/<name> -n <namespace>`
+
+**Actionable Steps:**
+1.  Replace `<name>` with the actual deployment name and `<namespace>` with the correct Kubernetes namespace.
+2.  After executing, monitor the rollout status using `kubectl rollout status deployment/<name> -n <namespace>`.
+3.  Verify application health and customer impact resolution.",5.0,5.0,5.0,5.0,5.0,5.0,321,341,662,provider_reported,2864.0,9.93e-05,USD,
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q03_TECH_K8S_UNDO,What is the exact command to undo the previous Kubernetes deployment revision?,procedural_runbook,SEV-3,0.35,0.6,tier3_heavy,cohere,command-r-plus-08-2024,SUCCESS,Real candidate generation recorded.,4.6,4.6,4.6,4.6,5.0,4.6,358,537,895,provider_reported,17556.0,0.00224,USD,
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q04_ZERO_DB_INSPECT,What is the zero-cost procedure to safely inspect and terminate idle PostgreSQL connections without service downtime?,database_optimization,SEV-3,0.35,0.6,tier0_zero_cost,openrouter,nvidia/nemotron-3-ultra-550b-a55b:free,SUCCESS,Real candidate generation recorded.,5.0,5.0,5.0,5.0,5.0,5.0,329,494,824,provider_reported,24148.0,0.0,USD,
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q04_ZERO_DB_INSPECT,What is the zero-cost procedure to safely inspect and terminate idle PostgreSQL connections without service downtime?,database_optimization,SEV-3,0.35,0.6,tier1_fast,groq,openai/gpt-oss-20b,SUCCESS,Real candidate generation recorded.,2.4,2.4,2.4,2.4,5.0,2.4,342,514,857,provider_reported,2080.0,9e-05,USD,
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q04_ZERO_DB_INSPECT,What is the zero-cost procedure to safely inspect and terminate idle PostgreSQL connections without service downtime?,database_optimization,SEV-3,0.35,0.6,tier2_high_reasoning,gemini,gemini-2.5-flash,SUCCESS,"**Diagnosis:**
+The incident query points to a potential PostgreSQL connection saturation issue, likely indicated by `FATAL: remaining connection slots are reserved` errors. Idle connections are consuming valuable database slots, preventing new, active connections and impacting service availability.
+
+**Root Cause:**
+Excessive idle PostgreSQL connections, potentially from application misconfigurations or ungraceful client disconnections, are exhausting the database's `max_connections` limit.
+
+**Remediation Procedure (Zero-Cost & Safe):**
+
+1.  **Inspect Idle Connections:**
+    Execute the following SQL query on the PostgreSQL database to identify idle connections older than 10 minutes:
+    ```sql
+    SELECT pid, usename, application_name, client_addr, state, state_change, query_start, age(now(), query_start) AS idle_duration
+    FROM pg_stat_activity
+    WHERE state IN ('idle', 'idle in transaction')
+    AND age(now(), query_start) > INTERVAL '10 minutes'
+    ORDER BY idle_duration DESC;
+    ```
+    This uses `pg_stat_activity` as per the runbook.
+
+2.  **Terminate Idle Connections:**
+    For each `pid` identified in the previous step, safely terminate the connection using:
+    ```sql
+    SELECT pg_terminate_backend(PID_TO_TERMINATE);
+    ```
+    Replace `PID_TO_TERMINATE` with the actual process ID. Terminating truly idle connections (especially those older than 10 minutes) is a low-risk operation and should not cause service downtime.",4.5,4.5,5.0,4.5,5.0,4.7,320,840,1160,provider_reported,4861.0,0.000174,USD,
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q04_ZERO_DB_INSPECT,What is the zero-cost procedure to safely inspect and terminate idle PostgreSQL connections without service downtime?,database_optimization,SEV-3,0.35,0.6,tier3_heavy,cohere,command-r-plus-08-2024,SUCCESS,Real candidate generation recorded.,4.68,4.68,4.68,4.68,5.0,4.68,346,519,865,provider_reported,17203.0,0.00216,USD,
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q05_ZERO_TLS_RENEW,Provide a zero-cost runbook check to verify ingress TLS certificate validity and renewal deadlines.,kubernetes_security,SEV-3,0.35,0.6,tier0_zero_cost,openrouter,nvidia/nemotron-3-ultra-550b-a55b:free,SUCCESS,Real candidate generation recorded.,0.0,0.0,0.0,0.0,0.0,0.0,327,490,818,provider_reported,59902.0,0.0,USD,Unterminated string starting a
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q05_ZERO_TLS_RENEW,Provide a zero-cost runbook check to verify ingress TLS certificate validity and renewal deadlines.,kubernetes_security,SEV-3,0.35,0.6,tier1_fast,groq,openai/gpt-oss-20b,SUCCESS,Real candidate generation recorded.,4.0,4.0,4.0,4.0,5.0,4.0,341,512,854,provider_reported,1908.0,9e-05,USD,
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q05_ZERO_TLS_RENEW,Provide a zero-cost runbook check to verify ingress TLS certificate validity and renewal deadlines.,kubernetes_security,SEV-3,0.35,0.6,tier2_high_reasoning,gemini,gemini-2.5-flash,SUCCESS,"**Technical Diagnosis:**
+The provided runbook context (`checkout-api-runbook.md`, `payments-high-cpu-runbook.md`) does not contain specific instructions or checks for verifying ingress TLS certificate validity or renewal deadlines. The existing documentation focuses on application deployment health, pod status, and CPU-related performance issues.
+
+**Safe Remediation Procedure:**
+To implement this zero-cost check and address the runbook gap:
+
+1.  **Update Runbooks:** Add a dedicated section to an appropriate runbook (e.g., a general networking or ingress runbook, or extend `checkout-api-runbook.md` if `checkout-api` uses a dedicated ingress) outlining the procedure.
+2.  **Procedure Example (for future runbook update):**
+    *   Identify the ingress resource: `kubectl get ingress <ingress-name>`
+    *   Retrieve the TLS secret name from the ingress definition.
+    *   Inspect certificate validity and expiration dates:
+        `kubectl get secret <secret-name> -o jsonpath='{.data.tls\.crt}' | base64 -d | openssl x509 -noout -dates`
+    *   Alternatively, use `curl -vI https://your-service.com` and inspect the certificate details in the output.
+3.  **Automate Monitoring:** Consider integrating automated certificate expiration monitoring into your observability stack.",4.0,2.5,4.5,4.0,5.0,4.0,314,1466,1780,provider_reported,7615.0,0.000267,USD,
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q05_ZERO_TLS_RENEW,Provide a zero-cost runbook check to verify ingress TLS certificate validity and renewal deadlines.,kubernetes_security,SEV-3,0.35,0.6,tier3_heavy,cohere,command-r-plus-08-2024,SUCCESS,Real candidate generation recorded.,3.3,3.3,3.3,3.3,5.0,3.3,373,560,934,provider_reported,120197.0,0.00233,USD,
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q06_DIFF_OOM_137,Application pods are in CrashLoopBackOff terminating with OOMKilled exit code 137.,container_runtime,SEV-2,0.35,0.6,tier0_zero_cost,openrouter,nvidia/nemotron-3-ultra-550b-a55b:free,SUCCESS,Real candidate generation recorded.,3.7,3.7,3.7,3.7,5.0,3.7,353,530,884,provider_reported,18006.0,0.0,USD,
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q06_DIFF_OOM_137,Application pods are in CrashLoopBackOff terminating with OOMKilled exit code 137.,container_runtime,SEV-2,0.35,0.6,tier1_fast,groq,openai/gpt-oss-20b,SUCCESS,Real candidate generation recorded.,3.6,3.6,3.6,3.6,5.0,3.6,366,549,916,provider_reported,1964.0,9e-05,USD,
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q06_DIFF_OOM_137,Application pods are in CrashLoopBackOff terminating with OOMKilled exit code 137.,container_runtime,SEV-2,0.35,0.6,tier2_high_reasoning,gemini,gemini-2.5-flash,SUCCESS,"**Diagnosis:**
+Application pods are terminating with `OOMKilled` (exit code 137) and entering `CrashLoopBackOff`. This indicates the pods are exceeding their allocated memory limits, causing the Kubernetes OOM killer to terminate them. This is likely due to a recent deployment introducing increased memory consumption, a memory leak, or insufficient memory requests/limits for the `checkout-api` application.
+
+**Remediation:**
+As all pods are failing, an immediate rollback to the previous stable deployment is required.
+
+1.  **Rollback:**
+    *   For `kubectl` deployments: `kubectl rollout undo deployment/<name> -n <namespace>`
+    *   For Helm releases: `helm rollback <release-name> <previous-revision> -n <namespace>` (use `helm history` to find the stable revision).
+2.  **Monitor:** Watch the rollout status (`kubectl rollout status`) and verify pod health (`kubectl get pods`).
+3.  **Confirm:** Ensure error rates drop to baseline in Grafana within 5 minutes.
+
+Post-rollback, investigate the memory usage of the problematic image to identify the root cause (e.g., memory leak, increased load, misconfigured limits).",4.0,4.0,5.0,3.5,5.0,4.3,379,884,1263,provider_reported,4663.0,0.0001894,USD,
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q06_DIFF_OOM_137,Application pods are in CrashLoopBackOff terminating with OOMKilled exit code 137.,container_runtime,SEV-2,0.35,0.6,tier3_heavy,cohere,command-r-plus-08-2024,SUCCESS,Real candidate generation recorded.,4.3,4.3,4.3,4.3,5.0,4.3,378,567,946,provider_reported,14776.0,0.00236,USD,
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q07_TECH_SHEDDING,Database capacity is at limit and payments service CPU is saturated. How to mitigate without scaling pod replicas?,capacity_mitigation,SEV-2,0.35,0.6,tier0_zero_cost,openrouter,nvidia/nemotron-3-ultra-550b-a55b:free,SUCCESS,Real candidate generation recorded.,0.0,0.0,0.0,0.0,0.0,0.0,348,522,870,provider_reported,18288.0,0.0,USD,Unterminated string starting a
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q07_TECH_SHEDDING,Database capacity is at limit and payments service CPU is saturated. How to mitigate without scaling pod replicas?,capacity_mitigation,SEV-2,0.35,0.6,tier1_fast,groq,openai/gpt-oss-20b,SUCCESS,Real candidate generation recorded.,0.0,0.0,0.0,0.0,0.0,0.0,362,544,907,provider_reported,1949.0,9e-05,USD,Expecting value: line 1 column
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q07_TECH_SHEDDING,Database capacity is at limit and payments service CPU is saturated. How to mitigate without scaling pod replicas?,capacity_mitigation,SEV-2,0.35,0.6,tier2_high_reasoning,gemini,gemini-2.5-flash,SUCCESS,"**Diagnosis:**
+Payments service CPU saturation concurrent with database capacity limits, without the option to scale pods, strongly indicates an internal application issue or an unthrottled background process. This is likely a CPU-heavy regression from a recent deployment, an unthrottled batch job, or internal retry storms/timeout loops, all of which amplify load on both the service and the database. Scaling pods is explicitly contraindicated due to the existing database capacity constraint.
+
+**Remediation:**
+1.  **Inspect Recent Changes:** Immediately review recent deployments and feature-flag changes. If a CPU-heavy regression is suspected, prepare for a rollback.
+2.  **Review Logs:** Analyze logs for retry storms, timeout loops, serialization errors, or runaway background jobs. If an unthrottled batch job is identified, throttle or stop it.
+3.  Prioritize addressing the identified root cause (e.g., rollback, fix batch job) to alleviate pressure on both the payments service and the database.",4.0,2.5,4.0,2.5,5.0,3.6,361,1392,1753,provider_reported,17595.0,0.0002629,USD,
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q07_TECH_SHEDDING,Database capacity is at limit and payments service CPU is saturated. How to mitigate without scaling pod replicas?,capacity_mitigation,SEV-2,0.35,0.6,tier3_heavy,cohere,command-r-plus-08-2024,SUCCESS,Real candidate generation recorded.,0.0,0.0,0.0,0.0,0.0,0.0,361,542,904,provider_reported,19326.0,0.00226,USD,Expecting property name enclos
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q08_TECH_504_INGRESS,External clients are encountering HTTP 504 Gateway Timeout on ingress routes during traffic spikes.,ingress_networking,SEV-2,0.35,0.6,tier0_zero_cost,openrouter,nvidia/nemotron-3-ultra-550b-a55b:free,SUCCESS,Real candidate generation recorded.,4.1,4.1,4.1,4.1,5.0,4.1,325,488,814,provider_reported,11240.0,0.0,USD,
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q08_TECH_504_INGRESS,External clients are encountering HTTP 504 Gateway Timeout on ingress routes during traffic spikes.,ingress_networking,SEV-2,0.35,0.6,tier1_fast,groq,openai/gpt-oss-20b,SUCCESS,Real candidate generation recorded.,4.2,4.2,4.2,4.2,5.0,4.2,338,508,847,provider_reported,2070.0,8e-05,USD,
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q08_TECH_504_INGRESS,External clients are encountering HTTP 504 Gateway Timeout on ingress routes during traffic spikes.,ingress_networking,SEV-2,0.35,0.6,tier2_high_reasoning,gemini,gemini-2.5-flash,SUCCESS,"**Diagnosis:**
+External clients are encountering HTTP 504 Gateway Timeouts during traffic spikes, indicating an upstream service is overloaded and failing to respond within the ingress timeout. This aligns with symptoms of high CPU on the payments service, which can cause slow responses and 5xx errors on the `/checkout` endpoint, especially during peak load. The `payments-high-cpu-runbook` explicitly links high CPU to new deploys or unthrottled batch jobs, leading to service degradation.
+
+**Remediation:**
+1.  **Immediate Mitigation:** Enable request rate limiting at the ingress layer to protect the overloaded upstream service (likely payments) from excessive traffic spikes.
+2.  **Resource Relief:** Temporarily disable non-critical background jobs to free up CPU resources on the payments service.
+3.  **Monitor:** Closely monitor CPU utilization on the payments service and error rates on the `/checkout` endpoint. If CPU remains above 80% for 20 minutes, escalate to the payments engineering team.",2.5,4.0,4.5,2.0,0.0,2.6,308,1141,1449,provider_reported,6229.0,0.0002173,USD,
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q08_TECH_504_INGRESS,External clients are encountering HTTP 504 Gateway Timeout on ingress routes during traffic spikes.,ingress_networking,SEV-2,0.35,0.6,tier3_heavy,cohere,command-r-plus-08-2024,SUCCESS,Real candidate generation recorded.,3.8,3.8,3.8,3.8,5.0,3.8,346,519,866,provider_reported,11920.0,0.00216,USD,
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q09_COMPLEX_CASCADING,"Checkout transactions are timing out with 503 while payments-service exhibits a single hot pod at 98% CPU and Postgres connection pool is elevated at 85%. Is this a database deadlock, Redis session failure, or sticky session hot-spotting?",complex_multi_hop,SEV-1,0.35,0.6,tier0_zero_cost,openrouter,nvidia/nemotron-3-ultra-550b-a55b:free,SUCCESS,Real candidate generation recorded.,4.6,4.6,4.6,4.6,5.0,4.6,348,522,870,provider_reported,14473.0,0.0,USD,
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q09_COMPLEX_CASCADING,"Checkout transactions are timing out with 503 while payments-service exhibits a single hot pod at 98% CPU and Postgres connection pool is elevated at 85%. Is this a database deadlock, Redis session failure, or sticky session hot-spotting?",complex_multi_hop,SEV-1,0.35,0.6,tier1_fast,groq,openai/gpt-oss-20b,SUCCESS,Real candidate generation recorded.,0.0,0.0,0.0,0.0,0.0,0.0,361,541,903,provider_reported,1925.0,9e-05,USD,Expecting value: line 1 column
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q09_COMPLEX_CASCADING,"Checkout transactions are timing out with 503 while payments-service exhibits a single hot pod at 98% CPU and Postgres connection pool is elevated at 85%. Is this a database deadlock, Redis session failure, or sticky session hot-spotting?",complex_multi_hop,SEV-1,0.35,0.6,tier2_high_reasoning,gemini,gemini-2.5-flash,SUCCESS,"**Diagnosis:**
+The incident is primarily caused by a hot-spotting issue within the `payments-service`. A single `payments-service` pod is overloaded (98% CPU) due to uneven traffic distribution, likely from sticky sessions, as indicated by the `payments-high-cpu-runbook`. This bottleneck is causing checkout transaction timeouts (503). The elevated PostgreSQL connection pool (85%) is a secondary",4.5,4.0,2.0,2.5,5.0,3.6,366,1496,1862,provider_reported,8803.0,0.0002793,USD,
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q09_COMPLEX_CASCADING,"Checkout transactions are timing out with 503 while payments-service exhibits a single hot pod at 98% CPU and Postgres connection pool is elevated at 85%. Is this a database deadlock, Redis session failure, or sticky session hot-spotting?",complex_multi_hop,SEV-1,0.35,0.6,tier3_heavy,cohere,command-r-plus-08-2024,SUCCESS,Real candidate generation recorded.,0.0,0.0,0.0,0.0,0.0,0.0,363,544,908,provider_reported,8630.0,0.00227,USD,"Expecting ',' delimiter: line "
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q10_COMPLEX_ROLLBACK,"A production rollback was initiated after 502 errors, but database schema migrations were already applied during the release. Should we proceed with kubectl rollout undo?",complex_multi_hop,SEV-1,0.35,0.6,tier0_zero_cost,openrouter,nvidia/nemotron-3-ultra-550b-a55b:free,SUCCESS,Real candidate generation recorded.,4.4,4.4,4.4,4.4,5.0,4.4,344,516,861,provider_reported,21146.0,0.0,USD,
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q10_COMPLEX_ROLLBACK,"A production rollback was initiated after 502 errors, but database schema migrations were already applied during the release. Should we proceed with kubectl rollout undo?",complex_multi_hop,SEV-1,0.35,0.6,tier1_fast,groq,openai/gpt-oss-20b,SUCCESS,Real candidate generation recorded.,4.9,4.9,4.9,4.9,5.0,4.9,354,532,887,provider_reported,2807.0,9e-05,USD,
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q10_COMPLEX_ROLLBACK,"A production rollback was initiated after 502 errors, but database schema migrations were already applied during the release. Should we proceed with kubectl rollout undo?",complex_multi_hop,SEV-1,0.35,0.6,tier2_high_reasoning,gemini,gemini-2.5-flash,SUCCESS,"**Diagnosis:**
+Do NOT proceed with `kubectl rollout undo` immediately. The applied database schema migrations are a critical dependency. Rolling back the application code to a version expecting an older schema, when the database has already been updated, will likely cause new, potentially more severe, application errors (e.g., schema mismatches, data corruption) if the migrations are not backward-compatible.
+
+**Remediation:**
+1.  **Halt Rollback:** Stop any ongoing `kubectl rollout undo` operations.
+2.  **Database Compatibility Check:** Immediately verify if the applied database migrations are *backward-compatible* with the previous application version.
+3.  **If Backward-Compatible:** You may proceed with `kubectl rollout undo`.
+4.  **If NOT Backward-Compatible:**
+    *   **Do NOT** roll back the application code.
+    *   You must either:
+        *   Apply a *separate database migration* to revert the schema changes to be compatible with the previous application version *before* rolling back the application.
+        *   Or, prioritize a *hotfix* to the current problematic application version that addresses the 502 errors, as this might be safer than a complex database rollback.
+    *   Consult with database administrators and application developers.",5.0,5.0,5.0,4.0,5.0,4.8,339,881,1220,provider_reported,5180.0,0.000183,USD,
+EXP_ADARAG_1793252542,2026-10-29 11:58:00,Q10_COMPLEX_ROLLBACK,"A production rollback was initiated after 502 errors, but database schema migrations were already applied during the release. Should we proceed with kubectl rollout undo?",complex_multi_hop,SEV-1,0.35,0.6,tier3_heavy,cohere,command-r-plus-08-2024,SUCCESS,Real candidate generation recorded.,5.0,5.0,5.0,5.0,5.0,5.0,371,556,928,provider_reported,16935.0,0.00232,USD,

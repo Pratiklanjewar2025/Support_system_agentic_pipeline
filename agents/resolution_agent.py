@@ -3,6 +3,7 @@ Resolution Agent — generates step-by-step resolution instructions
 based on the diagnosed root cause and knowledge base context.
 """
 
+import os
 from agents.llm_utils import get_llm
 from langchain_core.messages import HumanMessage, SystemMessage
 

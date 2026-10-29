@@ -1,0 +1,5 @@
+ablation_configuration,total_lookups,exact_hits,semantic_hits,cache_misses,total_cache_hits,cache_hit_rate_pct,average_latency_ms,total_tokens,total_api_cost_usd,latency_reduction_pct,token_reduction_pct,cost_reduction_pct
+No Cache,20,0,0,20,0,0.0,27150.0,34560,0.0043,0.0,0.0,0.0
+Exact-Match Cache,20,5,0,15,5,25.0,20373.2,25920,0.003225,24.96,25.0,25.0
+Semantic Cache Only,20,0,9,11,9,45.0,14973.07,19008,0.002365,44.85,45.0,45.0
+Exact-Match + Semantic Cache,20,5,4,11,9,45.0,14974.82,19008,0.002365,44.84,45.0,45.0

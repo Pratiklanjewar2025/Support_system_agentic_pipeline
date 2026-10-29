@@ -19,6 +19,7 @@ Produces 10 standard operational fields:
 """
 
 import json
+import os
 import re
 from typing import Dict, List, Any, Optional
 

@@ -1,0 +1,6 @@
+model_tier,provider,model_id,successful_evaluations,failed_evaluations,average_quality,average_faithfulness,average_input_tokens,average_output_tokens,average_total_tokens,average_latency_ms,p95_latency_ms,total_api_cost,average_cost_per_query,cost_per_quality_point
+tier0_zero_cost,openrouter,nvidia/nemotron-3-ultra-550b-a55b:free,10,0,3.65,3.65,335.7,503.6,840.1,24985.7,59486.2,0.0,0.0,0.0
+tier1_fast,groq,openai/gpt-oss-20b,10,0,3.36,3.36,349.6,524.8,875.3,2195.2,2928.55,0.00089,8.9e-05,2.65e-05
+tier2_high_reasoning,gemini,gemini-2.5-flash,10,0,4.21,4.1,334.0,1048.5,1382.5,7019.9,13638.6,0.0020736,0.0002074,4.93e-05
+tier3_heavy,cohere,command-r-plus-08-2024,10,0,3.44,3.44,360.0,540.1,900.9,40906.2,139343.05,0.02251,0.002251,0.0006544
+AdaRAG-Ops (Proposed System),Adaptive Multi-Agent,Dynamic (T0/T1/T2/T3),10,0,4.02,4.08,859.5,869.0,1728.5,27147.8,64582.35,0.0021467,0.0002147,5.34e-05
